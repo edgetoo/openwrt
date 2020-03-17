@@ -53,6 +53,22 @@ define Device/DniImage
 endef
 DEVICE_VARS += NETGEAR_BOARD_ID NETGEAR_HW_ID
 
+define Build/mkmylofw_32m
+	$(eval device_id=$(word 1,$(1)))
+	$(eval revision=$(word 2,$(1)))
+
+	let \
+		size="$$(stat -c%s $@)" \
+		pad="$(subst k,* 1024,$(BLOCKSIZE))" \
+		pad="(pad - (size % pad)) % pad" \
+		newsize='size + pad'; \
+		$(STAGING_DIR_HOST)/bin/mkmylofw \
+		-B WPE72 -i 0x11f6:$(device_id):0x11f6:$(device_id) -r $(revision) \
+		-s 0x2000000 -p0x180000:$$newsize:al:0x80208000:"OpenWrt":$@ \
+		$@.new
+	@mv $@.new $@
+endef
+
 define Build/SenaoFW
 	-$(STAGING_DIR_HOST)/bin/mksenaofw \
 		-n $(BOARD_NAME) -r $(VENDOR_ID) -p $(1) \
@@ -243,8 +259,9 @@ define Device/compex_wpj428
 	BLOCKSIZE := 64k
 	IMAGE_SIZE := 31232k
 	KERNEL_SIZE := 4096k
-	IMAGES = sysupgrade.bin
+	IMAGES = sysupgrade.bin cpximg-6a04.bin
 	IMAGE/sysupgrade.bin := append-kernel | append-rootfs | pad-rootfs | append-metadata
+	IMAGE/cpximg-6a04.bin := append-kernel | append-rootfs | pad-rootfs | mkmylofw_32m 0x8A2 3
 	DEVICE_PACKAGES := kmod-gpio-beeper
 endef
 TARGET_DEVICES += compex_wpj428
@@ -402,7 +419,7 @@ define Device/linksys_ea6350v3
 	IMAGE_SIZE := 37888k
 	UBINIZE_OPTS := -E 5
 	IMAGES := factory.bin sysupgrade.bin
-	IMAGE/factory.bin := append-kernel | append-uImage-fakehdr filesystem | pad-to $$$${KERNEL_SIZE} | append-ubi | linksys-image type=EA6350v3
+	IMAGE/factory.bin := append-kernel | append-uImage-fakehdr filesystem | pad-to $$$$(KERNEL_SIZE) | append-ubi | linksys-image type=EA6350v3
 	DEVICE_PACKAGES := uboot-envtools
 endef
 TARGET_DEVICES += linksys_ea6350v3
@@ -418,7 +435,7 @@ define Device/linksys_ea8300
 	PAGESIZE := 2048
 	UBINIZE_OPTS := -E 5    # EOD marks to "hide" factory sig at EOF
 	IMAGES := sysupgrade.bin factory.bin
-	IMAGE/factory.bin  := append-kernel | pad-to $$$${KERNEL_SIZE} | append-ubi | linksys-image type=EA8300
+	IMAGE/factory.bin  := append-kernel | pad-to $$$$(KERNEL_SIZE) | append-ubi | linksys-image type=EA8300
 	DEVICE_PACKAGES := uboot-envtools ath10k-firmware-qca9888-ct ipq-wifi-linksys_ea8300 kmod-usb-ledtrig-usbport
 endef
 TARGET_DEVICES += linksys_ea8300
@@ -504,7 +521,7 @@ define Device/qcom_ap-dk01.1-c1
 	IMAGE_SIZE := 26624k
 	$(call Device/FitImage)
 	IMAGES := sysupgrade.bin
-	IMAGE/sysupgrade.bin := append-kernel | pad-to $$$${KERNEL_SIZE} | append-rootfs | pad-rootfs | append-metadata
+	IMAGE/sysupgrade.bin := append-kernel | pad-to $$$$(KERNEL_SIZE) | append-rootfs | pad-rootfs | append-metadata
 endef
 TARGET_DEVICES += qcom_ap-dk01.1-c1
 
