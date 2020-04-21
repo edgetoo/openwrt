@@ -229,6 +229,7 @@ endef
 TARGET_DEVICES += dlink_dir-860l-b1
 
 define Device/d-team_newifi-d2
+  $(Device/uimage-lzma-loader)
   IMAGE_SIZE := 32448k
   DEVICE_VENDOR := Newifi
   DEVICE_MODEL := D2
@@ -339,7 +340,7 @@ TARGET_DEVICES += gnubee_gb-pc2
 define Device/hiwifi_hc5962
   BLOCKSIZE := 128k
   PAGESIZE := 2048
-  KERNEL_SIZE := 2097152
+  KERNEL_SIZE := 4096k
   UBINIZE_OPTS := -E 5
   IMAGE_SIZE := 32768k
   IMAGES += factory.bin
@@ -349,9 +350,6 @@ define Device/hiwifi_hc5962
   DEVICE_VENDOR := HiWiFi
   DEVICE_MODEL := HC5962
   DEVICE_PACKAGES := kmod-mt7603 kmod-mt76x2 kmod-usb3 wpad-basic
-  SUPPORTED_DEVICES += hc5962
-  # Kernel partition too small
-  DEFAULT := n
 endef
 TARGET_DEVICES += hiwifi_hc5962
 
@@ -463,6 +461,7 @@ endef
 TARGET_DEVICES += jcg_jhr-ac876m
 
 define Device/lenovo_newifi-d1
+  $(Device/uimage-lzma-loader)
   IMAGE_SIZE := 32448k
   DEVICE_VENDOR := Newifi
   DEVICE_MODEL := D1
@@ -565,6 +564,7 @@ endef
 TARGET_DEVICES += netgear_ex6150
 
 define Device/netgear_sercomm_nand
+  $(Device/uimage-lzma-loader)
   BLOCKSIZE := 128k
   PAGESIZE := 2048
   KERNEL_SIZE := 4096k
@@ -624,6 +624,10 @@ define Device/netgear_r6700-v2
   DEVICE_VARIANT := v2
   DEVICE_ALT0_VENDOR := NETGEAR
   DEVICE_ALT0_MODEL := Nighthawk AC2400
+  DEVICE_ALT0_VARIANT := v1
+  DEVICE_ALT1_VENDOR := NETGEAR
+  DEVICE_ALT1_MODEL := R7200
+  DEVICE_ALT1_VARIANT := v1
   SERCOMM_HWNAME := R6950
   SERCOMM_HWID := BZV
   SERCOMM_HWVER := A001
@@ -658,6 +662,7 @@ endef
 TARGET_DEVICES += netgear_r6850
 
 define Device/netgear_wndr3700-v5
+  $(Device/uimage-lzma-loader)
   BLOCKSIZE := 64k
   IMAGE_SIZE := 15232k
   SERCOMM_HWID := AYB
@@ -747,6 +752,7 @@ endef
 TARGET_DEVICES += telco-electronics_x1
 
 define Device/thunder_timecloud
+  $(Device/uimage-lzma-loader)
   IMAGE_SIZE := 16064k
   DEVICE_VENDOR := Thunder
   DEVICE_MODEL := Timecloud
@@ -794,6 +800,7 @@ endef
 TARGET_DEVICES += tplink_re650-v1
 
 define Device/ubnt_edgerouter_common
+  $(Device/uimage-lzma-loader)
   DEVICE_VENDOR := Ubiquiti
   IMAGE_SIZE := 256768k
   FILESYSTEMS := squashfs
@@ -870,6 +877,7 @@ endef
 TARGET_DEVICES += wevo_w2914ns-v2
 
 define Device/xiaomi_mir3g
+  $(Device/uimage-lzma-loader)
   BLOCKSIZE := 128k
   PAGESIZE := 2048
   KERNEL_SIZE := 4096k
@@ -889,6 +897,7 @@ endef
 TARGET_DEVICES += xiaomi_mir3g
 
 define Device/xiaomi_mir3g-v2
+  $(Device/uimage-lzma-loader)
   IMAGE_SIZE := 14848k
   DEVICE_VENDOR := Xiaomi
   DEVICE_MODEL := Mi Router 3G
@@ -901,6 +910,7 @@ endef
 TARGET_DEVICES += xiaomi_mir3g-v2
 
 define Device/xiaomi_mir3p
+  $(Device/uimage-lzma-loader)
   BLOCKSIZE := 128k
   PAGESIZE := 2048
   KERNEL_SIZE:= 4096k
