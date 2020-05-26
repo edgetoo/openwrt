@@ -5,7 +5,11 @@ platform_check_image() {
 	[ "$#" -gt 1 ] && return 1
 
 	case "$(board_name)" in
-		comtrend,vr-3032u)
+		comtrend,vg-8050|\
+		comtrend,vr-3032u|\
+		huawei,hg253s-v2|\
+		netgear,dgnd3700-v2|\
+		sercomm,ad1018)
 			# NAND sysupgrade
 			return 0
 			;;
@@ -61,7 +65,11 @@ cfe_jffs2_upgrade_tar() {
 
 platform_do_upgrade() {
 	case "$(board_name)" in
-		comtrend,vr-3032u)
+		comtrend,vg-8050|\
+		comtrend,vr-3032u|\
+		huawei,hg253s-v2|\
+		netgear,dgnd3700-v2|\
+		sercomm,ad1018)
 			REQUIRE_IMAGE_METADATA=1
 			cfe_jffs2_upgrade_tar "$1"
 			;;
