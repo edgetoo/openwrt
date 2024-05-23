@@ -1,23 +1,24 @@
 #
-# Copyright (C) 2017-2019 Tomasz Maciej Nowak <tomek_n@o2.pl>
+# Copyright (C) 2017-2019 Tomasz Maciej Nowak <tmn505@gmail.com>
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
 #
 include $(TOPDIR)/rules.mk
 
-PKG_VERSION := 2019.04
-PKG_RELEASE := 1
+PKG_VERSION := 2024.04
+PKG_RELEASE:=1
 
-PKG_HASH := 76b7772d156b3ddd7644c8a1736081e55b78828537ff714065d21dbade229bef
+PKG_HASH := 18a853fe39fad7ad03a90cc2d4275aeaed6da69735defac3492b80508843dd4a
 
-PKG_MAINTAINER := Tomasz Maciej Nowak <tomek_n@o2.pl>
+PKG_MAINTAINER := Tomasz Maciej Nowak <tmn505@gmail.com>
 
 include $(INCLUDE_DIR)/u-boot.mk
 include $(INCLUDE_DIR)/package.mk
 
 define U-Boot/Default
   BUILD_TARGET := tegra
+  BUILD_SUBTARGET := generic
   HIDDEN := y
 endef
 
@@ -43,11 +44,6 @@ define Build/bct-image
 			$(PKG_BUILD_DIR)/$(bct).img; \
 		rm -f $(bct).bct; \
 	)
-endef
-
-define Build/Configure
-	sed '/select BINMAN/d' -i $(PKG_BUILD_DIR)/arch/arm/mach-tegra/Kconfig
-	$(call Build/Configure/U-Boot)
 endef
 
 define Build/Compile

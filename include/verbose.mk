@@ -1,9 +1,6 @@
+# SPDX-License-Identifier: GPL-2.0-only
 #
-# Copyright (C) 2006 OpenWrt.org
-#
-# This is free software, licensed under the GNU General Public License v2.
-# See /LICENSE for more information.
-#
+# Copyright (C) 2006-2020 OpenWrt.org
 
 ifndef OPENWRT_VERBOSE
   OPENWRT_VERBOSE:=
@@ -32,13 +29,19 @@ ifeq ($(IS_TTY),1)
   endif
 endif
 
+define ERROR_MESSAGE
+  { \
+	printf "$(_R)%s$(_N)\n" "$(1)" >&9 || \
+	printf "$(_R)%s$(_N)\n" "$(1)"; \
+  } >&2 2>/dev/null
+endef
+
 ifeq ($(findstring s,$(OPENWRT_VERBOSE)),)
   define MESSAGE
-	printf "$(_Y)%s$(_N)\n" "$(1)" >&8
-  endef
-
-  define ERROR_MESSAGE
-	printf "$(_R)%s$(_N)\n" "$(1)" >&8
+	{ \
+		printf "$(_Y)%s$(_N)\n" "$(1)" >&8 || \
+		printf "$(_Y)%s$(_N)\n" "$(1)"; \
+	} 2>/dev/null
   endef
 
   ifeq ($(QUIET),1)
@@ -47,9 +50,12 @@ ifeq ($(findstring s,$(OPENWRT_VERBOSE)),)
     else
       _DIR:=
     endif
-    _NULL:=$(if $(MAKECMDGOALS),$(shell \
+    _MESSAGE:=$(if $(MAKECMDGOALS),$(shell \
 		$(call MESSAGE, make[$(MAKELEVEL)]$(if $(_DIR), -C $(_DIR)) $(MAKECMDGOALS)); \
     ))
+    ifneq ($(strip $(_MESSAGE)),)
+      $(info $(_MESSAGE))
+    endif
     SUBMAKE=$(MAKE)
   else
     SILENT:=>/dev/null $(if $(findstring w,$(OPENWRT_VERBOSE)),,2>&1)
@@ -63,5 +69,4 @@ else
   define MESSAGE
     printf "%s\n" "$(1)"
   endef
-  ERROR_MESSAGE=$(MESSAGE)
 endif

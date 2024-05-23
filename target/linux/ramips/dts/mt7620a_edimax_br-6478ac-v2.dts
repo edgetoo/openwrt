@@ -1,20 +1,16 @@
+// SPDX-License-Identifier: GPL-2.0-only
 /*
- * Device Tree file for the Edimax BR-6478AC V2
- * based on Linksys E1700
- *
  * Copyright (C) 2016 Rohan Murch <rohan.murch@gmail.com>
  * Copyright (C) 2016 Hans Ulli Kroll <ulli.kroll@googlemail.com>
  * Copyright (C) 2017 James McKenzie <openwrt@madingley.org>
- *
- * This file is licensed under the terms of the GNU General Public
- * License version 2.  This program is licensed "as is" without any
- * warranty of any kind, whether express or implied.
  */
 
 #include "mt7620a.dtsi"
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
+#include <dt-bindings/leds/common.h>
+#include <dt-bindings/mtd/partitions/uimage.h>
 
 / {
 	compatible = "edimax,br-6478ac-v2", "ralink,mt7620a-soc";
@@ -41,7 +37,8 @@
 		compatible = "gpio-leds";
 
 		led_power: power {
-			label = "white:power";
+			function = LED_FUNCTION_POWER;
+			color = <LED_COLOR_ID_WHITE>;
 			gpios = <&gpio0 11 GPIO_ACTIVE_LOW>;
 		};
 
@@ -51,12 +48,14 @@
 		};
 
 		wlan {
-			label = "blue:wlan";
+			function = LED_FUNCTION_WLAN;
+			color = <LED_COLOR_ID_BLUE>;
 			gpios = <&gpio0 10 GPIO_ACTIVE_LOW>;
 		};
 
 		usb {
-			label = "blue:usb";
+			function = LED_FUNCTION_USB;
+			color = <LED_COLOR_ID_BLUE>;
 			gpios = <&gpio0 14 GPIO_ACTIVE_LOW>;
 			trigger-sources = <&ohci_port1>, <&ehci_port1>;
 			linux,default-trigger = "usbport";
@@ -103,10 +102,28 @@
 				read-only;
 			};
 
-			factory: partition@40000 {
+			partition@40000 {
 				label = "factory";
 				reg = <0x40000 0x10000>;
 				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					eeprom_factory_0: eeprom@0 {
+						reg = <0x0 0x200>;
+					};
+
+					eeprom_factory_8000: eeprom@8000 {
+						reg = <0x8000 0x200>;
+					};
+
+					macaddr_factory_4: macaddr@4 {
+						reg = <0x4 0x6>;
+					};
+				};
 			};
 
 			partition@50000 {
@@ -116,7 +133,9 @@
 			};
 
 			partition@70000 {
-				compatible = "edimax,uimage";
+				compatible = "openwrt,uimage", "denx,uimage";
+				openwrt,offset = <FW_EDIMAX_OFFSET>;
+				openwrt,partition-magic = <FW_MAGIC_EDIMAX>;
 				label = "firmware";
 				reg = <0x00070000 0x00790000>;
 			};
@@ -135,7 +154,8 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&rgmii1_pins &rgmii2_pins &mdio_pins>;
 
-	mtd-mac-address = <&factory 0x4>;
+	nvmem-cells = <&macaddr_factory_4>;
+	nvmem-cell-names = "mac-address";
 
 	mediatek,portmap = "wllll";
 
@@ -181,11 +201,12 @@
 };
 
 &gsw {
-	mediatek,port4 = "gmac";
+	mediatek,ephy-base = /bits/ 8 <12>;
 };
 
 &wmac {
-	ralink,mtd-eeprom = <&factory 0x0>;
+	nvmem-cells = <&eeprom_factory_0>;
+	nvmem-cell-names = "eeprom";
 };
 
 &pcie {
@@ -195,8 +216,9 @@
 &pcie0 {
 	wifi@0,0 {
 		reg = <0x0000 0 0 0 0>;
-		mediatek,mtd-eeprom = <&factory 0x8000>;
-		mediatek,2ghz = <0>;
+		nvmem-cells = <&eeprom_factory_8000>;
+		nvmem-cell-names = "eeprom";
+		ieee80211-freq-limit = <5000000 6000000>;
 	};
 };
 

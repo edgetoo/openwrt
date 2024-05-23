@@ -1,9 +1,7 @@
+# SPDX-License-Identifier: GPL-2.0-only
 #
-# Copyright (C) 2017 OpenWrt.org
-#
-# This is free software, licensed under the GNU General Public License v2.
-# See /LICENSE for more information.
-#
+# Copyright (C) 2017-2021 OpenWrt.org
+
 include $(TOPDIR)/rules.mk
 
 ARCH:=mipsel
@@ -12,8 +10,9 @@ BOARDNAME:=MIPS pistachio
 FEATURES:=fpu usb usbgadget squashfs targz nand
 CPU_TYPE:=24kc
 CPU_SUBTYPE:=24kf
+SUBTARGETS:=generic
 
-KERNEL_PATCHVER:=5.4
+KERNEL_PATCHVER:=6.1
 
 include $(INCLUDE_DIR)/target.mk
 

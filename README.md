@@ -1,4 +1,4 @@
-![OpenWrt logo](/logo.svg)
+![OpenWrt logo](include/logo.png)
 
 OpenWrt Project is a Linux operating system targeting embedded devices. Instead
 of trying to create a single, static firmware, OpenWrt provides a fully
@@ -11,9 +11,27 @@ full customization, to use the device in ways never envisioned.
 
 Sunshine!
 
+## Download
+
+Built firmware images are available for many architectures and come with a
+package selection to be used as WiFi home router. To quickly find a factory
+image usable to migrate from a vendor stock firmware to OpenWrt, try the
+*Firmware Selector*.
+
+* [OpenWrt Firmware Selector](https://firmware-selector.openwrt.org/)
+
+If your device is supported, please follow the **Info** link to see install
+instructions or consult the support resources listed below.
+
+## 
+
+An advanced user may require additional or specific package. (Toolchain, SDK, ...) For everything else than simple firmware download, try the wiki download page:
+
+* [OpenWrt Wiki Download](https://openwrt.org/downloads)
+
 ## Development
 
-To build your own firmware you need a GNU/Linux, BSD or MacOSX system (case
+To build your own firmware you need a GNU/Linux, BSD or macOS system (case
 sensitive filesystem required). Cygwin is unsupported because of the lack of a
 case sensitive file system.
 
@@ -25,8 +43,8 @@ the [Build System Setup](https://openwrt.org/docs/guide-developer/build-system/i
 documentation.
 
 ```
-gcc binutils bzip2 flex python3 perl make find grep diff unzip gawk getopt
-subversion libz-dev libc-dev
+binutils bzip2 diff find flex gawk gcc-6+ getopt grep install libc-dev libz-dev
+make4.1+ perl python3.7+ rsync subversion unzip which
 ```
 
 ### Quickstart
@@ -57,8 +75,11 @@ packages to OpenWrt, please find the fitting repository below.
 * [OpenWrt Packages](https://github.com/openwrt/packages): Community repository
   of ported packages.
 
-* [OpenWrt Routing](https://github.com/openwrt-routing/packages): Packages
-  specifically focused on (mesh) routing.
+* [OpenWrt Routing](https://github.com/openwrt/routing): Packages specifically
+  focused on (mesh) routing.
+
+* [OpenWrt Video](https://github.com/openwrt/video): Packages specifically
+  focused on display servers and clients (Xorg and Wayland).
 
 ## Support Information
 
@@ -74,13 +95,13 @@ For a list of supported devices see the [OpenWrt Hardware Database](https://open
 ### Support Community
 
 * [Forum](https://forum.openwrt.org): For usage, projects, discussions and hardware advise.
-* [Support Chat](https://webchat.freenode.net/#openwrt): Channel `#openwrt` on freenode.net.
+* [Support Chat](https://webchat.oftc.net/#openwrt): Channel `#openwrt` on **oftc.net**.
 
 ### Developer Community
 
 * [Bug Reports](https://bugs.openwrt.org): Report bugs in OpenWrt
 * [Dev Mailing List](https://lists.openwrt.org/mailman/listinfo/openwrt-devel): Send patches
-* [Dev Chat](https://webchat.freenode.net/#openwrt-devel): Channel `#openwrt-devel` on freenode.net.
+* [Dev Chat](https://webchat.oftc.net/#openwrt-devel): Channel `#openwrt-devel` on **oftc.net**.
 
 ## License
 

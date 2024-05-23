@@ -8,14 +8,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libressl
-PKG_VERSION:=3.2.1
-PKG_HASH:=d28db224cfb6d18009b2a7e8cb213cd5c943bbec87550062fef6a38479250315
-PKG_RELEASE:=1
+PKG_VERSION:=3.7.3
+PKG_HASH:=7948c856a90c825bd7268b6f85674a8dcd254bae42e221781b24e3f8dc335db3
 
 PKG_CPE_ID:=cpe:/a:openbsd:libressl
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=http://mirror.ox.ac.uk/pub/OpenBSD/LibreSSL \
+PKG_SOURCE_URL:=https://mirror.ox.ac.uk/pub/OpenBSD/LibreSSL \
 	http://ftp.jaist.ac.jp/pub/OpenBSD/LibreSSL \
 	https://ftp.openbsd.org/pub/OpenBSD/LibreSSL
 
@@ -23,11 +22,19 @@ HOST_BUILD_PARALLEL:=1
 
 include $(INCLUDE_DIR)/host-build.mk
 
-HOST_CONFIGURE_ARGS += --enable-static --disable-shared --disable-tests
-HOST_CFLAGS += $(FPIC)
+HOSTCC := $(HOSTCC_NOCACHE)
 
-ifeq ($(GNU_HOST_NAME),x86_64-linux-gnux32)
-HOST_CONFIGURE_ARGS += --disable-asm
-endif
+HOST_CFLAGS += $(HOST_FPIC)
+
+HOST_CONFIGURE_ARGS += \
+	--enable-static \
+	--disable-shared \
+	--disable-asm \
+	--with-pic \
+	--disable-tests
+
+define Host/Uninstall
+	-$(call Host/Compile/Default,uninstall)
+endef
 
 $(eval $(call HostBuild))

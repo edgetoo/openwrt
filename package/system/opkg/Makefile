@@ -1,22 +1,20 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
-# Copyright (C) 2006-2015 OpenWrt.org
-# Copyright (C) 2016-2017 LEDE Project
+# Copyright (C) 2006-2021 OpenWrt.org
 #
-# This is free software, licensed under the GNU General Public License v2.
-# See /LICENSE for more information.
 
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=opkg
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 PKG_FLAGS:=essential
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=https://git.openwrt.org/project/opkg-lede.git
-PKG_SOURCE_DATE:=2020-08-31
-PKG_SOURCE_VERSION:=cf44c2feb606b60ba3f35392e102c281ef6ea0da
-PKG_MIRROR_HASH:=0d7be9f8f86864e2a9999145210ecaa286fb85cfae131ec502609a6d1e435871
+PKG_SOURCE_URL=$(PROJECT_GIT)/project/opkg-lede.git
+PKG_SOURCE_DATE:=2022-02-24
+PKG_SOURCE_VERSION:=d038e5b6d155784575f62a66a8bb7e874173e92e
+PKG_MIRROR_HASH:=6889f7d322996f9291f42d7d6a5877d256b91d4a01d6015cebaae9227702eb43
 
 PKG_LICENSE:=GPL-2.0
 PKG_LICENSE_FILES:=COPYING
@@ -28,11 +26,9 @@ PKG_CONFIG_DEPENDS += \
 	CONFIG_SIGNATURE_CHECK \
 	CONFIG_TARGET_INIT_PATH
 
-PKG_BUILD_PARALLEL:=1
-HOST_BUILD_PARALLEL:=1
-PKG_INSTALL:=1
-
 HOST_BUILD_DEPENDS:=libubox/host
+
+PKG_BUILD_FLAGS:=gc-sections
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/host-build.mk
@@ -63,7 +59,6 @@ define Package/opkg/conffiles
 /etc/opkg/customfeeds.conf
 endef
 
-TARGET_CFLAGS += -ffunction-sections -fdata-sections
 EXTRA_CFLAGS += $(TARGET_CPPFLAGS)
 
 CMAKE_OPTIONS += \

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2007-2016 OpenWrt.org
+# Copyright (C) 2007-2021 OpenWrt.org
 # Copyright (C) 2010 Vertical Communications
 #
 # This is free software, licensed under the GNU General Public License v2.
@@ -12,8 +12,8 @@ include $(INCLUDE_DIR)/version.mk
 include $(INCLUDE_DIR)/feeds.mk
 
 PKG_NAME:=base-files
-PKG_RELEASE:=233
 PKG_FLAGS:=nonshared
+PKG_RELEASE:=$(COMMITCOUNT)
 
 PKG_FILE_DEPENDS:=$(PLATFORM_DIR)/ $(GENERIC_PLATFORM_DIR)/base-files/
 PKG_BUILD_DEPENDS:=usign/host ucert/host
@@ -23,6 +23,8 @@ PKG_LICENSE:=GPL-2.0
 PKG_CONFIG_DEPENDS += \
 	CONFIG_SIGNED_PACKAGES CONFIG_TARGET_INIT_PATH CONFIG_TARGET_PREINIT_DISABLE_FAILSAFE \
 	CONFIG_NAND_SUPPORT \
+	CONFIG_LEGACY_SDCARD_SUPPORT \
+	CONFIG_EMMC_SUPPORT \
 	CONFIG_CLEAN_IPKG \
 	CONFIG_PER_FEED_REPO \
 	$(foreach feed,$(FEEDS_AVAILABLE),CONFIG_FEED_$(feed))
@@ -30,7 +32,7 @@ PKG_CONFIG_DEPENDS += \
 include $(INCLUDE_DIR)/package.mk
 
 ifneq ($(DUMP),1)
-  STAMP_CONFIGURED:=$(strip $(STAMP_CONFIGURED))_$(shell echo $(CONFIG_TARGET_INIT_PATH) | mkhash md5)
+  STAMP_CONFIGURED:=$(strip $(STAMP_CONFIGURED))_$(shell echo $(CONFIG_TARGET_INIT_PATH) | $(MKHASH) md5)
   TARGET:=-$(BOARD)
 endif
 
@@ -40,14 +42,13 @@ define Package/base-files
   DEPENDS:=+netifd +libc +jsonfilter +SIGNED_PACKAGES:usign +SIGNED_PACKAGES:openwrt-keyring +NAND_SUPPORT:ubi-utils +fstools +fwtool
   TITLE:=Base filesystem for OpenWrt
   URL:=http://openwrt.org/
-  VERSION:=$(PKG_RELEASE)-$(REVISION)
+  VERSION:=$(PKG_RELEASE)~$(lastword $(subst -, ,$(REVISION)))
 endef
 
 define Package/base-files/conffiles
 /etc/config/
 /etc/config/network
 /etc/config/system
-/etc/crontabs/
 /etc/dropbear/
 /etc/ethers
 /etc/group
@@ -88,10 +89,26 @@ define ImageConfigOptions
 	echo 'pi_preinit_net_messages="$(CONFIG_TARGET_PREINIT_SHOW_NETMSG)"' >>$(1)/lib/preinit/00_preinit.conf
 	echo 'pi_preinit_no_failsafe_netmsg="$(CONFIG_TARGET_PREINIT_SUPPRESS_FAILSAFE_NETMSG)"' >>$(1)/lib/preinit/00_preinit.conf
 	echo 'pi_preinit_no_failsafe="$(CONFIG_TARGET_PREINIT_DISABLE_FAILSAFE)"' >>$(1)/lib/preinit/00_preinit.conf
+ifeq ($(CONFIG_TARGET_DEFAULT_LAN_IP_FROM_PREINIT),y)
+	mkdir -p $(1)/etc/board.d
+	echo '. /lib/functions/uci-defaults.sh' >$(1)/etc/board.d/99-lan-ip
+	echo 'logger -t 99-lan-ip "setting custom default LAN IP"' >>$(1)/etc/board.d/99-lan-ip
+	echo 'board_config_update' >>$(1)/etc/board.d/99-lan-ip
+	echo 'json_select network' >>$(1)/etc/board.d/99-lan-ip
+	echo 'json_select lan' >>$(1)/etc/board.d/99-lan-ip
+	echo 'json_add_string ipaddr $(if $(CONFIG_TARGET_PREINIT_IP),$(CONFIG_TARGET_PREINIT_IP),"192.168.1.1")' >>$(1)/etc/board.d/99-lan-ip
+	echo 'json_add_string netmask $(if $(CONFIG_TARGET_PREINIT_NETMASK),$(CONFIG_TARGET_PREINIT_NETMASK),"255.255.255.0")' >>$(1)/etc/board.d/99-lan-ip
+	echo 'json_select ..' >>$(1)/etc/board.d/99-lan-ip
+	echo 'json_select ..' >>$(1)/etc/board.d/99-lan-ip
+	echo 'board_config_flush' >>$(1)/etc/board.d/99-lan-ip
+endif
 endef
 
 define Build/Prepare
 	mkdir -p $(PKG_BUILD_DIR)
+endef
+
+define Build/Quilt
 endef
 
 define Build/Compile/Default
@@ -99,6 +116,14 @@ define Build/Compile/Default
 endef
 Build/Compile = $(Build/Compile/Default)
 
+ifneq ($(CONFIG_USE_APK),)
+ifndef CONFIG_BUILDBOT
+  define Package/base-files/install-key
+	mkdir -p $(1)/etc/apk/keys
+	$(CP) $(BUILD_KEY_APK_PUB) $(1)/etc/apk/keys/
+  endef
+endif
+else
 ifdef CONFIG_SIGNED_PACKAGES
   define Build/Configure
 	[ -s $(BUILD_KEY) -a -s $(BUILD_KEY).pub ] || \
@@ -113,8 +138,8 @@ ifndef CONFIG_BUILDBOT
   define Package/base-files/install-key
 	mkdir -p $(1)/etc/opkg/keys
 	$(CP) $(BUILD_KEY).pub $(1)/etc/opkg/keys/`$(STAGING_DIR_HOST)/bin/usign -F -p $(BUILD_KEY).pub`
-
   endef
+endif
 endif
 endif
 
@@ -124,10 +149,25 @@ ifeq ($(CONFIG_NAND_SUPPORT),)
   endef
 endif
 
+ifeq ($(CONFIG_EMMC_SUPPORT),)
+  define Package/base-files/emmc-support
+	rm -f $(1)/lib/upgrade/emmc.sh
+  endef
+endif
+
+ifeq ($(CONFIG_LEGACY_SDCARD_SUPPORT),)
+  define Package/base-files/legacy-sdcard-support
+	rm -f $(1)/lib/upgrade/legacy-sdcard.sh
+  endef
+endif
+
+
 define Package/base-files/install
 	$(CP) ./files/* $(1)/
 	$(Package/base-files/install-key)
 	$(Package/base-files/nand-support)
+	$(Package/base-files/legacy-sdcard-support)
+	$(Package/base-files/emmc-support)
 	if [ -d $(GENERIC_PLATFORM_DIR)/base-files/. ]; then \
 		$(CP) $(GENERIC_PLATFORM_DIR)/base-files/* $(1)/; \
 	fi
@@ -142,40 +182,46 @@ define Package/base-files/install
 
 	$(VERSION_SED_SCRIPT) \
 		$(1)/etc/banner \
+		$(1)/etc/device_info \
+		$(1)/etc/openwrt_release \
 		$(1)/etc/openwrt_version \
 		$(1)/usr/lib/os-release
 
-	$(VERSION_SED_SCRIPT) \
-		$(1)/etc/openwrt_release \
-		$(1)/etc/device_info \
-		$(1)/usr/lib/os-release
 
 	$(SED) "s#%PATH%#$(TARGET_INIT_PATH)#g" \
 		$(1)/sbin/hotplug-call \
 		$(1)/etc/preinit \
 		$(1)/etc/profile
 
-	mkdir -p $(1)/CONTROL
-	mkdir -p $(1)/dev
-	mkdir -p $(1)/etc/config
-	mkdir -p $(1)/etc/crontabs
-	mkdir -p $(1)/etc/rc.d
-	mkdir -p $(1)/overlay
-	mkdir -p $(1)/lib/firmware
-	$(if $(LIB_SUFFIX),-$(LN) lib $(1)/lib$(LIB_SUFFIX))
-	mkdir -p $(1)/mnt
-	mkdir -p $(1)/proc
-	mkdir -p $(1)/tmp
-	mkdir -p $(1)/usr/lib
-	$(if $(LIB_SUFFIX),-$(LN) lib $(1)/usr/lib$(LIB_SUFFIX))
-	mkdir -p $(1)/usr/bin
-	mkdir -p $(1)/sys
-	mkdir -p $(1)/www
-	mkdir -p $(1)/root
+	mkdir -p \
+		$(1)/CONTROL \
+		$(1)/dev \
+		$(1)/etc/config \
+		$(1)/etc/crontabs \
+		$(1)/etc/rc.d \
+		$(1)/overlay \
+		$(1)/lib/firmware \
+		$(1)/mnt \
+		$(1)/proc \
+		$(1)/tmp \
+		$(1)/usr/lib \
+		$(1)/usr/bin \
+		$(1)/sys \
+		$(1)/www
+	mkdir -p -m 750 \
+		$(1)/root
+
 	$(LN) /proc/mounts $(1)/etc/mtab
+	$(if $(LIB_SUFFIX),-$(LN) lib $(1)/lib$(LIB_SUFFIX))
+	$(if $(LIB_SUFFIX),-$(LN) lib $(1)/usr/lib$(LIB_SUFFIX))
+
+ifneq ($(CONFIG_TARGET_ROOTFS_PERSIST_VAR),y)
 	rm -f $(1)/var
 	$(LN) tmp $(1)/var
-	mkdir -p $(1)/etc
+else
+	mkdir -p $(1)/var
+	$(LN) /tmp/run $(1)/var/run
+endif
 	$(LN) /tmp/resolv.conf /tmp/TZ /tmp/localtime $(1)/etc/
 
 	chmod 0600 $(1)/etc/shadow
@@ -196,12 +242,21 @@ define Package/base-files/install
 		cat $(BIN_DIR)/feeds.buildinfo >>$(1)/etc/build.feeds; \
 		cat $(BIN_DIR)/version.buildinfo >>$(1)/etc/build.version)
 
+	$(if $(CONFIG_TARGET_PREINIT_DISABLE_FAILSAFE), \
+		rm -f $(1)/etc/banner.failsafe,)
+
+ifneq ($(CONFIG_USE_APK),)
+	mkdir -p $(1)/etc/apk/
+	$(call FeedSourcesAppendAPK,$(1)/etc/apk/repositories)
+	$(VERSION_SED_SCRIPT) $(1)/etc/apk/repositories
+else
 	$(if $(CONFIG_CLEAN_IPKG),, \
 		mkdir -p $(1)/etc/opkg; \
-		$(call FeedSourcesAppend,$(1)/etc/opkg/distfeeds.conf); \
+		$(call FeedSourcesAppendOPKG,$(1)/etc/opkg/distfeeds.conf); \
 		$(VERSION_SED_SCRIPT) $(1)/etc/opkg/distfeeds.conf)
 	$(if $(CONFIG_IPK_FILES_CHECKSUMS),, \
 		rm -f $(1)/sbin/pkg_check)
+endif
 endef
 
 ifneq ($(DUMP),1)

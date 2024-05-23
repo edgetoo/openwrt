@@ -11,19 +11,15 @@ PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL=$(PROJECT_GIT)/project/iwinfo.git
-PKG_SOURCE_DATE:=2020-06-03
-PKG_SOURCE_VERSION:=2faa20e5e9d107b97e393a4eb458370e80b4d720
-PKG_MIRROR_HASH:=c5094a1751cbc610a91d21b7ddbec85c4f80d51dddb249fdcabb327ab1e2523f
+PKG_SOURCE_DATE:=2024-03-23
+PKG_SOURCE_VERSION:=79a96150647110fb03852bc321bd37159d63ae1a
+PKG_MIRROR_HASH:=0bf6230019f80a05ae2a49722f3ecb2a9000da7ae0d398fd0e163d168ee8b494
 PKG_MAINTAINER:=Jo-Philipp Wich <jo@mein.io>
 PKG_LICENSE:=GPL-2.0
 
-PKG_FLAGS := nonshared
+PKG_BUILD_FLAGS:=no-lto
 
-PKG_CONFIG_DEPENDS := \
-	CONFIG_PACKAGE_kmod-brcm-wl \
-	CONFIG_PACKAGE_kmod-brcm-wl-mini \
-	CONFIG_PACKAGE_kmod-brcm-wl-mimo \
-	CONFIG_PACKAGE_kmod-cfg80211
+IWINFO_ABI_VERSION:=20230701
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -32,13 +28,13 @@ define Package/libiwinfo
   SECTION:=libs
   CATEGORY:=Libraries
   TITLE:=Generalized Wireless Information Library (iwinfo)
-  DEPENDS:=+PACKAGE_kmod-cfg80211:libnl-tiny +libuci +libubus
-  ABI_VERSION:=20200105
+  DEPENDS:=+libnl-tiny +libuci +libubus +libiwinfo-data
+  ABI_VERSION:=$(IWINFO_ABI_VERSION)
 endef
 
 define Package/libiwinfo/description
-  Wireless information library with consistent interface for proprietary Broadcom,
-  nl80211 and wext driver interfaces.
+  Wireless information library with simplified API for nl80211
+  and wext driver interfaces.
 endef
 
 
@@ -53,6 +49,12 @@ endef
 define Package/libiwinfo-lua/description
   This is the Lua binding for the iwinfo library. It provides access to all enabled
   backends.
+endef
+
+
+define Package/libiwinfo-data
+  TITLE:=libiwinfo Lua binding
+  HIDDEN:=1
 endef
 
 
@@ -71,12 +73,6 @@ endef
 define Build/Configure
 endef
 
-IWINFO_BACKENDS := \
-	$(if $(CONFIG_PACKAGE_kmod-brcm-wl),wl) \
-	$(if $(CONFIG_PACKAGE_kmod-brcm-wl-mini),wl) \
-	$(if $(CONFIG_PACKAGE_kmod-brcm-wl-mimo),wl) \
-	$(if $(CONFIG_PACKAGE_kmod-cfg80211),nl80211)
-
 TARGET_CFLAGS += \
 	-I$(STAGING_DIR)/usr/include/libnl-tiny \
 	-I$(STAGING_DIR)/usr/include \
@@ -86,28 +82,32 @@ MAKE_FLAGS += \
 	FPIC="$(FPIC)" \
 	CFLAGS="$(TARGET_CFLAGS)" \
 	LDFLAGS="$(TARGET_LDFLAGS)" \
-	BACKENDS="$(IWINFO_BACKENDS)"
+	BACKENDS="nl80211" \
+	SOVERSION="$(IWINFO_ABI_VERSION)"
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include/iwinfo
 	$(CP) $(PKG_BUILD_DIR)/include/iwinfo.h $(1)/usr/include/
 	$(CP) $(PKG_BUILD_DIR)/include/iwinfo/* $(1)/usr/include/iwinfo/
 	$(INSTALL_DIR) $(1)/usr/lib
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/libiwinfo.so $(1)/usr/lib/libiwinfo.so
+	$(CP) $(PKG_BUILD_DIR)/libiwinfo.so* $(1)/usr/lib/
 	$(INSTALL_DIR) $(1)/usr/lib/lua
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/iwinfo.so $(1)/usr/lib/lua/iwinfo.so
 endef
 
 define Package/libiwinfo/install
 	$(INSTALL_DIR) $(1)/usr/lib
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/libiwinfo.so $(1)/usr/lib/libiwinfo.so
-	$(INSTALL_DIR) $(1)/usr/share/libiwinfo
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/hardware.txt $(1)/usr/share/libiwinfo/hardware.txt
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/libiwinfo.so.$(IWINFO_ABI_VERSION) $(1)/usr/lib/libiwinfo.so.$(IWINFO_ABI_VERSION)
 endef
 
 define Package/libiwinfo-lua/install
 	$(INSTALL_DIR) $(1)/usr/lib/lua
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/iwinfo.so $(1)/usr/lib/lua/iwinfo.so
+endef
+
+define Package/libiwinfo-data/install
+	$(INSTALL_DIR) $(1)/usr/share/libiwinfo
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/devices.txt $(1)/usr/share/libiwinfo/devices.txt
 endef
 
 define Package/iwinfo/install
@@ -117,4 +117,5 @@ endef
 
 $(eval $(call BuildPackage,libiwinfo))
 $(eval $(call BuildPackage,libiwinfo-lua))
+$(eval $(call BuildPackage,libiwinfo-data))
 $(eval $(call BuildPackage,iwinfo))

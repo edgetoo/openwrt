@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later OR MIT
 
+#include <dt-bindings/leds/common.h>
+
 #include "ar9341_tplink.dtsi"
 
 / {
 	model = "TP-Link TL-MR3420 v2";
 	compatible = "tplink,tl-mr3420-v2", "qca,ar9341";
+
+	aliases {
+		label-mac-device = &wmac;
+	};
 
 	keys {
 		compatible = "gpio-keys";
@@ -27,7 +33,8 @@
 
 &leds {
 	usb {
-		label = "green:usb";
+		function = LED_FUNCTION_USB;
+		color = <LED_COLOR_ID_GREEN>;
 		gpios = <&gpio 11 GPIO_ACTIVE_LOW>;
 		trigger-sources = <&hub_port>;
 		linux,default-trigger = "usbport";
@@ -44,8 +51,6 @@
 };
 
 &spi {
-	num-cs = <1>;
-
 	status = "okay";
 
 	flash@0 {
@@ -62,6 +67,18 @@
 				label = "u-boot";
 				reg = <0x000000 0x020000>;
 				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					macaddr_uboot_1fc00: macaddr@1fc00 {
+						compatible = "mac-base";
+						reg = <0x1fc00 0x6>;
+						#nvmem-cell-cells = <1>;
+					};
+				};
 			};
 
 			partition@20000 {
@@ -80,16 +97,26 @@
 };
 
 &usb {
-	#address-cells = <1>;
-	#size-cells = <0>;
 	status = "okay";
-
-	hub_port: port@1 {
-		reg = <1>;
-		#trigger-source-cells = <0>;
-	};
 };
 
 &usb_phy {
 	status = "okay";
+};
+
+&eth0 {
+	nvmem-cells = <&macaddr_uboot_1fc00 (-1)>;
+	nvmem-cell-names = "mac-address";
+};
+
+&eth1 {
+	nvmem-cells = <&macaddr_uboot_1fc00 0>;
+	nvmem-cell-names = "mac-address";
+};
+
+&wmac {
+	mtd-cal-data = <&art 0x1000>;
+
+	nvmem-cells = <&macaddr_uboot_1fc00 0>;
+	nvmem-cell-names = "mac-address";
 };

@@ -17,7 +17,7 @@ PKG_LICENSE:=GPL-2.0
 include $(INCLUDE_DIR)/package.mk
 
 define KernelPackage/gpio-nct5104d
-  SUBMENU:=Other modules
+  SUBMENU:=GPIO support
   TITLE:= GPIO nct5104d support
   DEPENDS:= @GPIO_SUPPORT @TARGET_x86
   FILES:=$(PKG_BUILD_DIR)/gpio-nct5104d.ko
@@ -36,15 +36,11 @@ EXTRA_CFLAGS:= \
 	$(patsubst CONFIG_%, -DCONFIG_%=1, $(patsubst %=m,%,$(filter %=m,$(EXTRA_KCONFIG)))) \
 	$(patsubst CONFIG_%, -DCONFIG_%=1, $(patsubst %=y,%,$(filter %=y,$(EXTRA_KCONFIG)))) \
 
-MAKE_OPTS:= \
-	$(KERNEL_MAKE_FLAGS) \
-	M="$(PKG_BUILD_DIR)" \
-	EXTRA_CFLAGS="$(EXTRA_CFLAGS)" \
-	$(EXTRA_KCONFIG)
-
 define Build/Compile
-	 $(MAKE) -C "$(LINUX_DIR)" \
-		$(MAKE_OPTS) \
+	 $(KERNEL_MAKE) \
+		M="$(PKG_BUILD_DIR)" \
+		EXTRA_CFLAGS="$(EXTRA_CFLAGS)" \
+		$(EXTRA_KCONFIG) \
 		modules
 endef
 

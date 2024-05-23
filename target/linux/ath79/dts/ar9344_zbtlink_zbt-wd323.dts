@@ -59,6 +59,14 @@
 			gpios = <&gpio 22 GPIO_ACTIVE_LOW>;
 		};
 	};
+	
+	watchdog {
+		compatible = "linux,wdt-gpio";
+		gpios = <&gpio 21 GPIO_ACTIVE_HIGH>;
+		hw_algo = "toggle";
+		hw_margin_ms = <30000>;
+		always-running;
+	};
 };
 
 &wdt {
@@ -66,10 +74,6 @@
 
 	pinctrl-names = "default";
 	pinctrl-0 = <&enable_gpio21>;
-};
-
-&uart {
-	status = "okay";
 };
 
 &gpio {
@@ -88,16 +92,17 @@
 &eth0 {
 	status = "okay";
 	phy-handle = <&swphy4>;
-	mtd-mac-address = <&art 0x0>;
+	nvmem-cells = <&macaddr_art_0>;
+	nvmem-cell-names = "mac-address";
 };
 
 &eth1 {
 	status = "okay";
-	mtd-mac-address = <&art 0x6>;
+	nvmem-cells = <&macaddr_art_6>;
+	nvmem-cell-names = "mac-address";
 };
 
 &spi {
-	num-chipselects = <1>;
 	status = "okay";
 
 	flash@0 {
@@ -128,6 +133,20 @@
 			art: art@ff0000 {
 				reg = <0xff0000 0x10000>;
 				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					macaddr_art_0: macaddr@0 {
+						reg = <0x0 0x6>;
+					};
+
+					macaddr_art_6: macaddr@6 {
+						reg = <0x6 0x6>;
+					};
+				};
 			};
 		};
 	};

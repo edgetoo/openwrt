@@ -5,12 +5,14 @@
 / {
 	model = "GL.iNet 6408";
 	compatible = "glinet,6408", "qca,ar9331";
+
+	aliases {
+		label-mac-device = &wmac;
+	};
 };
 
 &spi {
 	status = "okay";
-
-	num-cs = <1>;
 
 	flash@0 {
 		compatible = "jedec,spi-nor";
@@ -26,6 +28,16 @@
 				reg = <0x0 0x20000>;
 				label = "u-boot";
 				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					macaddr_uboot_1fc00: macaddr@1fc00 {
+						reg = <0x1fc00 0x6>;
+					};
+				};
 			};
 
 			partition@20000 {
@@ -41,4 +53,21 @@
 			};
 		};
 	};
+};
+
+&eth0 {
+	nvmem-cells = <&macaddr_uboot_1fc00>;
+	nvmem-cell-names = "mac-address";
+};
+
+&eth1 {
+	nvmem-cells = <&macaddr_uboot_1fc00>;
+	nvmem-cell-names = "mac-address";
+};
+
+&wmac {
+	mtd-cal-data = <&art 0x1000>;
+
+	nvmem-cells = <&macaddr_uboot_1fc00>;
+	nvmem-cell-names = "mac-address";
 };

@@ -6,12 +6,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=policycoreutils
-PKG_VERSION:=3.1
-PKG_RELEASE:=5
+PKG_VERSION:=3.5
+PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://github.com/SELinuxProject/selinux/releases/download/20200710
-PKG_HASH:=c889f62ee80f8b6a369469a9b8af51f5b797975aeaa291f5c5960cc12eed1934
+PKG_SOURCE_URL:=https://github.com/SELinuxProject/selinux/releases/download/$(PKG_VERSION)
+PKG_HASH:=78453e1529fbbf800e88860094d555e781ce1fba11a7ef77b5aabb43e1173276
 PKG_INSTALL:=1
 HOST_BUILD_DEPENDS:=libsemanage/host gettext-full/host
 PKG_BUILD_DEPENDS:=BUSYBOX_CONFIG_PAM:libpam gettext-full/host
@@ -27,11 +27,11 @@ include $(INCLUDE_DIR)/host-build.mk
 
 DIR_USR_BIN:= \
 	newrole \
-	secon
+	secon \
+	sestatus
 
 DIR_USR_SBIN:= \
 	load_policy \
-	sestatus \
 	setsebool
 
 LIBEXEC_UTILS := \
@@ -43,7 +43,8 @@ SBIN_UTILS:= \
 
 USR_BIN_UTILS:= \
 	newrole \
-	secon
+	secon \
+	sestatus
 
 USR_SBIN_UTILS:= \
 	fixfiles \
@@ -52,7 +53,6 @@ USR_SBIN_UTILS:= \
 	run_init \
 	semodule \
 	load_policy \
-	sestatus \
 	setsebool
 
 TARGET_LDFLAGS += $(INTL_LDFLAGS) $(if $(INTL_FULL),-lintl)

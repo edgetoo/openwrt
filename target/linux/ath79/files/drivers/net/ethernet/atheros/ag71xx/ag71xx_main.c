@@ -34,7 +34,7 @@ MODULE_PARM_DESC(msg_level, "Message level (-1=defaults,0=none,...,16=all)");
 
 #define ETH_SWITCH_HEADER_LEN	2
 
-static int ag71xx_tx_packets(struct ag71xx *ag, bool flush);
+static int ag71xx_tx_packets(struct ag71xx *ag, bool flush, int budget);
 
 static inline unsigned int ag71xx_max_frame_len(unsigned int mtu)
 {
@@ -333,7 +333,7 @@ static unsigned char *ag71xx_speed_str(struct ag71xx *ag)
 	return "?";
 }
 
-static void ag71xx_hw_set_macaddr(struct ag71xx *ag, unsigned char *mac)
+static void ag71xx_hw_set_macaddr(struct ag71xx *ag, const unsigned char *mac)
 {
 	u32 t;
 
@@ -407,11 +407,11 @@ static void ag71xx_dma_reset(struct ag71xx *ag)
 			 FIFO_CFG4_VT)
 
 #define FIFO_CFG5_INIT	(FIFO_CFG5_DE | FIFO_CFG5_DV | FIFO_CFG5_FC | \
-			 FIFO_CFG5_CE | FIFO_CFG5_LO | FIFO_CFG5_OK | \
-			 FIFO_CFG5_MC | FIFO_CFG5_BC | FIFO_CFG5_DR | \
-			 FIFO_CFG5_CF | FIFO_CFG5_PF | FIFO_CFG5_VT | \
-			 FIFO_CFG5_LE | FIFO_CFG5_FT | FIFO_CFG5_16 | \
-			 FIFO_CFG5_17 | FIFO_CFG5_SF)
+			 FIFO_CFG5_CE | FIFO_CFG5_LM | FIFO_CFG5_LO | \
+			 FIFO_CFG5_OK | FIFO_CFG5_MC | FIFO_CFG5_BC | \
+			 FIFO_CFG5_DR | FIFO_CFG5_CF | FIFO_CFG5_UO | \
+			 FIFO_CFG5_VT | FIFO_CFG5_LE | FIFO_CFG5_FT | \
+			 FIFO_CFG5_UC | FIFO_CFG5_SF)
 
 static void ag71xx_hw_stop(struct ag71xx *ag)
 {
@@ -478,7 +478,7 @@ static void ag71xx_fast_reset(struct ag71xx *ag)
 	mii_reg = ag71xx_rr(ag, AG71XX_REG_MII_CFG);
 	rx_ds = ag71xx_rr(ag, AG71XX_REG_RX_DESC);
 
-	ag71xx_tx_packets(ag, true);
+	ag71xx_tx_packets(ag, true, 0);
 
 	reset_control_assert(ag->mac_reset);
 	udelay(10);
@@ -577,6 +577,82 @@ static void ag71xx_bit_clear(void __iomem *reg, u32 bit)
 	__raw_readl(reg);
 }
 
+static void ag71xx_sgmii_serdes_init_qca956x(struct device_node *np)
+{
+	struct device_node *np_dev;
+	void __iomem *gmac_base;
+	u32 serdes_cal;
+	u32 t;
+
+	np = of_get_child_by_name(np, "gmac-config");
+	if (!np)
+		return;
+
+	if (of_property_read_u32(np, "serdes-cal", &serdes_cal))
+		/* By default, use middle value for resistor calibration */
+		serdes_cal = 0x7;
+
+	np_dev = of_parse_phandle(np, "device", 0);
+	if (!np_dev)
+		goto out;
+
+	gmac_base = of_iomap(np_dev, 0);
+	if (!gmac_base) {
+		pr_err("%pOF: can't map GMAC registers\n", np_dev);
+		goto err_iomap;
+	}
+
+	t = __raw_readl(gmac_base + QCA956X_GMAC_REG_SGMII_CONFIG);
+	t &= ~(QCA956X_SGMII_CONFIG_MODE_CTRL_MASK << QCA956X_SGMII_CONFIG_MODE_CTRL_SHIFT);
+	t |= QCA956X_SGMII_CONFIG_MODE_CTRL_SGMII_MAC;
+	__raw_writel(t, gmac_base + QCA956X_GMAC_REG_SGMII_CONFIG);
+
+	pr_debug("%pOF: fixup SERDES calibration to value %i\n",
+		np_dev, serdes_cal);
+	t = __raw_readl(gmac_base + QCA956X_GMAC_REG_SGMII_SERDES);
+	t &= ~(QCA956X_SGMII_SERDES_RES_CALIBRATION_MASK
+			<< QCA956X_SGMII_SERDES_RES_CALIBRATION_SHIFT);
+	t |= (serdes_cal & QCA956X_SGMII_SERDES_RES_CALIBRATION_MASK)
+			<< QCA956X_SGMII_SERDES_RES_CALIBRATION_SHIFT;
+	__raw_writel(t, gmac_base + QCA956X_GMAC_REG_SGMII_SERDES);
+
+	ath79_pll_wr(QCA956X_PLL_ETH_SGMII_SERDES_REG,
+			QCA956X_PLL_ETH_SGMII_SERDES_LOCK_DETECT
+					| QCA956X_PLL_ETH_SGMII_SERDES_EN_PLL);
+
+	t = __raw_readl(gmac_base + QCA956X_GMAC_REG_SGMII_SERDES);
+
+	/* missing in QCA u-boot code, clear before setting */
+	t &= ~(QCA956X_SGMII_SERDES_CDR_BW_MASK
+			<< QCA956X_SGMII_SERDES_CDR_BW_SHIFT |
+		QCA956X_SGMII_SERDES_TX_DR_CTRL_MASK
+			<< QCA956X_SGMII_SERDES_TX_DR_CTRL_SHIFT |
+		QCA956X_SGMII_SERDES_VCO_REG_MASK
+			<< QCA956X_SGMII_SERDES_VCO_REG_SHIFT);
+
+	t |= (3 << QCA956X_SGMII_SERDES_CDR_BW_SHIFT) |
+		(1 << QCA956X_SGMII_SERDES_TX_DR_CTRL_SHIFT) |
+		QCA956X_SGMII_SERDES_PLL_BW |
+		QCA956X_SGMII_SERDES_EN_SIGNAL_DETECT |
+		QCA956X_SGMII_SERDES_FIBER_SDO |
+		(3 << QCA956X_SGMII_SERDES_VCO_REG_SHIFT);
+
+	__raw_writel(t, gmac_base + QCA956X_GMAC_REG_SGMII_SERDES);
+
+	ath79_device_reset_clear(QCA956X_RESET_SGMII_ANALOG);
+	ath79_device_reset_clear(QCA956X_RESET_SGMII);
+
+	while (!(__raw_readl(gmac_base + QCA956X_GMAC_REG_SGMII_SERDES)
+			& QCA956X_SGMII_SERDES_LOCK_DETECT_STATUS))
+		;
+
+	iounmap(gmac_base);
+err_iomap:
+	of_node_put(np_dev);
+out:
+	of_node_put(np);
+}
+
 static void ag71xx_sgmii_init_qca955x(struct device_node *np)
 {
 	struct device_node *np_dev;
@@ -658,6 +734,37 @@ static void ag71xx_sgmii_init_qca955x(struct device_node *np)
 	} while (!(sgmii_status == 0xf || sgmii_status == 0x10));
 
 sgmii_out:
+	iounmap(gmac_base);
+err_iomap:
+	of_node_put(np_dev);
+out:
+	of_node_put(np);
+}
+
+static void ag71xx_mux_select_sgmii_qca956x(struct device_node *np)
+{
+	struct device_node *np_dev;
+	void __iomem *gmac_base;
+	u32 t;
+
+	np = of_get_child_by_name(np, "gmac-config");
+	if (!np)
+		return;
+
+	np_dev = of_parse_phandle(np, "device", 0);
+	if (!np_dev)
+		goto out;
+
+	gmac_base = of_iomap(np_dev, 0);
+	if (!gmac_base) {
+		pr_err("%pOF: can't map GMAC registers\n", np_dev);
+		goto err_iomap;
+	}
+
+	t = __raw_readl(gmac_base + QCA956X_GMAC_REG_ETH_CFG);
+	t |= QCA956X_ETH_CFG_GE0_SGMII;
+	__raw_writel(t, gmac_base + QCA956X_GMAC_REG_ETH_CFG);
+
 	iounmap(gmac_base);
 err_iomap:
 	of_node_put(np_dev);
@@ -834,7 +941,7 @@ __ag71xx_link_adjust(struct ag71xx *ag, bool update)
 		 * The wr, rr functions cannot be used since this hidden register
 		 * is outside of the normal ag71xx register block.
 		 */
-		void __iomem *dam = ioremap_nocache(0xb90001bc, 0x4);
+		void __iomem *dam = ioremap(0xb90001bc, 0x4);
 		if (dam) {
 			__raw_writel(__raw_readl(dam) & ~BIT(27), dam);
 			(void)__raw_readl(dam);
@@ -1059,7 +1166,7 @@ static int ag71xx_do_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 	switch (cmd) {
 	case SIOCSIFHWADDR:
 		if (copy_from_user
-			(dev->dev_addr, ifr->ifr_data, sizeof(dev->dev_addr)))
+			((void*)dev->dev_addr, ifr->ifr_data, sizeof(dev->dev_addr)))
 			return -EFAULT;
 		return 0;
 
@@ -1091,7 +1198,7 @@ static void ag71xx_oom_timer_handler(struct timer_list *t)
 	napi_schedule(&ag->napi);
 }
 
-static void ag71xx_tx_timeout(struct net_device *dev)
+static void ag71xx_tx_timeout(struct net_device *dev, unsigned int txqueue)
 {
 	struct ag71xx *ag = netdev_priv(dev);
 
@@ -1138,7 +1245,7 @@ static bool ag71xx_check_dma_stuck(struct ag71xx *ag)
 	return false;
 }
 
-static int ag71xx_tx_packets(struct ag71xx *ag, bool flush)
+static int ag71xx_tx_packets(struct ag71xx *ag, bool flush, int budget)
 {
 	struct ag71xx_ring *ring = &ag->tx_ring;
 	bool dma_stuck = false;
@@ -1171,7 +1278,7 @@ static int ag71xx_tx_packets(struct ag71xx *ag, bool flush)
 		if (!skb)
 			continue;
 
-		dev_kfree_skb_any(skb);
+		napi_consume_skb(skb, budget);
 		ring->buf[i].skb = NULL;
 
 		bytes_compl += ring->buf[i].len;
@@ -1212,7 +1319,6 @@ static int ag71xx_rx_packets(struct ag71xx *ag, int limit)
 	int ring_mask = BIT(ring->order) - 1;
 	int ring_size = BIT(ring->order);
 	struct list_head rx_list;
-	struct sk_buff *next;
 	struct sk_buff *skb;
 	int done = 0;
 
@@ -1245,7 +1351,7 @@ static int ag71xx_rx_packets(struct ag71xx *ag, int limit)
 		dev->stats.rx_packets++;
 		dev->stats.rx_bytes += pktlen;
 
-		skb = build_skb(ring->buf[i].rx_buf, ag71xx_buffer_size(ag));
+		skb = napi_build_skb(ring->buf[i].rx_buf, ag71xx_buffer_size(ag));
 		if (!skb) {
 			skb_free_frag(ring->buf[i].rx_buf);
 			goto next;
@@ -1272,7 +1378,7 @@ next:
 
 	ag71xx_ring_rx_refill(ag);
 
-	list_for_each_entry_safe(skb, next, &rx_list, list)
+	list_for_each_entry(skb, &rx_list, list)
 		skb->protocol = eth_type_trans(skb, dev);
 	netif_receive_skb_list(&rx_list);
 
@@ -1293,7 +1399,7 @@ static int ag71xx_poll(struct napi_struct *napi, int limit)
 	int tx_done;
 	int rx_done;
 
-	tx_done = ag71xx_tx_packets(ag, false);
+	tx_done = ag71xx_tx_packets(ag, false, limit);
 
 	DBG("%s: processing RX ring\n", dev->name);
 	rx_done = ag71xx_rx_packets(ag, limit);
@@ -1408,7 +1514,6 @@ static int ag71xx_probe(struct platform_device *pdev)
 	struct net_device *dev;
 	struct resource *res;
 	struct ag71xx *ag;
-	const void *mac_addr;
 	u32 max_frame_len;
 	int tx_size, err;
 
@@ -1422,6 +1527,11 @@ static int ag71xx_probe(struct platform_device *pdev)
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res)
 		return -EINVAL;
+
+	if (of_property_read_bool(np, "qca956x-serdes-fixup")) {
+		ag71xx_sgmii_serdes_init_qca956x(np);
+		ag71xx_sgmii_init_qca955x(np);
+	}
 
 	err = ag71xx_setup_gmac(np);
 	if (err)
@@ -1472,18 +1582,24 @@ static int ag71xx_probe(struct platform_device *pdev)
 		ag->pllregmap = NULL;
 	}
 
-	ag->mac_base = devm_ioremap_nocache(&pdev->dev, res->start,
-					    res->end - res->start + 1);
+	ag->mac_base = devm_ioremap(&pdev->dev, res->start,
+				    res->end - res->start + 1);
 	if (!ag->mac_base)
 		return -ENOMEM;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	if (res) {
-		ag->mii_base = devm_ioremap_nocache(&pdev->dev, res->start,
+		ag->mii_base = devm_ioremap(&pdev->dev, res->start,
 					    res->end - res->start + 1);
 		if (!ag->mii_base)
 			return -ENOMEM;
 	}
+
+	/* ensure that HW is in manual polling mode before interrupts are
+	 * activated. Otherwise ag71xx_interrupt might call napi_schedule
+	 * before it is initialized by netif_napi_add.
+	 */
+	ag71xx_int_disable(ag, AG71XX_INT_POLL);
 
 	dev->irq = platform_get_irq(pdev, 0);
 	err = devm_request_irq(&pdev->dev, dev->irq, ag71xx_interrupt,
@@ -1552,19 +1668,20 @@ static int ag71xx_probe(struct platform_device *pdev)
 	ag->stop_desc->ctrl = 0;
 	ag->stop_desc->next = (u32) ag->stop_desc_dma;
 
-	mac_addr = of_get_mac_address(np);
-	if (IS_ERR_OR_NULL(mac_addr) || !is_valid_ether_addr(mac_addr)) {
+	if (of_get_ethdev_address(np, dev)) {
 		dev_err(&pdev->dev, "invalid MAC address, using random address\n");
-		eth_random_addr(dev->dev_addr);
-	} else {
-		memcpy(dev->dev_addr, mac_addr, ETH_ALEN);
+		eth_hw_addr_random(dev);
 	}
 
-	ag->phy_if_mode = of_get_phy_mode(np);
-	if (ag->phy_if_mode < 0) {
+	err = of_get_phy_mode(np, &ag->phy_if_mode);
+	if (err < 0) {
 		dev_err(&pdev->dev, "missing phy-mode property in DT\n");
 		return ag->phy_if_mode;
 	}
+
+	if (of_device_is_compatible(np, "qca,qca9560-eth") &&
+	    ag->phy_if_mode == PHY_INTERFACE_MODE_SGMII)
+		ag71xx_mux_select_sgmii_qca956x(np);
 
 	if (of_property_read_u32(np, "qca,mac-idx", &ag->mac_idx))
 		ag->mac_idx = -1;
@@ -1580,7 +1697,7 @@ static int ag71xx_probe(struct platform_device *pdev)
 			break;
 		}
 
-	netif_napi_add(dev, &ag->napi, ag71xx_poll, AG71XX_NAPI_WEIGHT);
+	netif_napi_add_weight(dev, &ag->napi, ag71xx_poll, AG71XX_NAPI_WEIGHT);
 
 	ag71xx_dump_regs(ag);
 

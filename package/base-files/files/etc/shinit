@@ -1,4 +1,4 @@
-[ -x /bin/more ] || alias more=less
+[ -x /bin/more ] || [ -x /usr/bin/more ] || alias more=less
 [ -x /usr/bin/vim ] && alias vi=vim || alias vim=vi
 
 alias ll='ls -alF --color=auto'
@@ -7,15 +7,6 @@ alias ll='ls -alF --color=auto'
 
 [ -x /usr/bin/arp -o -x /sbin/arp ] || arp() { cat /proc/net/arp; }
 [ -x /usr/bin/ldd ] || ldd() { LD_TRACE_LOADED_OBJECTS=1 $*; }
-
-service() {
-	[ -f "/etc/init.d/$1" ] || {
-		echo "service "'"'"$1"'"'" not found, the following services are available:"
-		ls "/etc/init.d"
-		return 1
-	}
-	/etc/init.d/$@
-}
 
 [ -n "$KSH_VERSION" -o \! -s "$HOME/.shinit" ] || . "$HOME/.shinit"
 [ -z "$KSH_VERSION" -o \! -s "$HOME/.mkshrc" ] || . "$HOME/.mkshrc"

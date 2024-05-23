@@ -12,6 +12,8 @@
  *   Copyright (C) 2013-2015 Michael Lee <igvtee@gmail.com>
  */
 
+#include <linux/reset.h>
+
 #ifndef _RALINK_GSW_MT7620_H__
 #define _RALINK_GSW_MT7620_H__
 
@@ -55,7 +57,7 @@
 
 #define SYSC_REG_CHIP_REV_ID	0x0c
 #define SYSC_REG_CFG1		0x14
-#define RST_CTRL_MCM		BIT(2)
+#define PCIE_RC_MODE		BIT(8)
 #define SYSC_PAD_RGMII2_MDIO	0x58
 #define SYSC_GPIO_MODE		0x60
 
@@ -88,16 +90,13 @@ enum {
 	GSW_ATTR_PORT_UNTAG,
 };
 
-enum {
-	PORT4_EPHY = 0,
-	PORT4_EXT,
-};
-
 struct mt7620_gsw {
 	struct device		*dev;
+	struct reset_control	*rst_ephy;
 	void __iomem		*base;
 	int			irq;
-	int			port4;
+	bool			ephy_disable;
+	bool			port4_ephy;
 	unsigned long int	autopoll;
 	u16			ephy_base;
 };

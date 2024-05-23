@@ -1,18 +1,18 @@
+# SPDX-License-Identifier: GPL-2.0-only
 #
 # Copyright (C) 2009-2015 OpenWrt.org
-#
-# This is free software, licensed under the GNU General Public License v2.
-# See /LICENSE for more information.
-#
+
 include $(TOPDIR)/rules.mk
 
 ARCH:=arm
 BOARD:=kirkwood
 BOARDNAME:=Marvell Kirkwood
-FEATURES:=usb nand squashfs ramdisk
+FEATURES:=rtc usb nand squashfs ramdisk
 CPU_TYPE:=xscale
+SUBTARGETS:=generic
 
-KERNEL_PATCHVER:=5.4
+KERNEL_PATCHVER:=6.1
+KERNEL_TESTING_PATCHVER:=6.6
 
 include $(INCLUDE_DIR)/target.mk
 

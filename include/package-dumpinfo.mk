@@ -1,9 +1,6 @@
+# SPDX-License-Identifier: GPL-2.0-only
 #
-# Copyright (C) 2006 OpenWrt.org
-#
-# This is free software, licensed under the GNU General Public License v2.
-# See /LICENSE for more information.
-#
+# Copyright (C) 2006-2020 OpenWrt.org
 
 ifneq ($(DUMP),)
 
@@ -24,8 +21,7 @@ $(if $(MENU),Menu: $(MENU)
 )$(if $(DEFAULT),Default: $(DEFAULT)
 )$(if $(findstring $(PREREQ_CHECK),1),Prereq-Check: 1
 )Version: $(VERSION)
-$(if $(ABI_VERSION),ABIVersion: $(ABI_VERSION)
-)Depends: $(call PKG_FIXUP_DEPENDS,$(1),$(DEPENDS))
+Depends: $(call PKG_FIXUP_DEPENDS,$(1),$(DEPENDS))
 Conflicts: $(CONFLICTS)
 Menu-Depends: $(MDEPENDS)
 Provides: $(PROVIDES)
@@ -40,13 +36,14 @@ $(if $(USERID),Require-User: $(USERID)
 )Source: $(PKG_SOURCE)
 $(if $(LICENSE),License: $(LICENSE)
 )$(if $(LICENSE_FILES),LicenseFiles: $(LICENSE_FILES)
+)$(if $(PKG_CPE_ID),CPE-ID: $(PKG_CPE_ID)
+)$(if $(URL),URL: $(URL)
+)$(if $(ABI_VERSION),ABI-Version: $(ABI_VERSION)
 )Type: $(if $(Package/$(1)/targets),$(Package/$(1)/targets),$(if $(PKG_TARGETS),$(PKG_TARGETS),ipkg))
 $(if $(KCONFIG),Kernel-Config: $(KCONFIG)
 )$(if $(BUILDONLY),Build-Only: $(BUILDONLY)
 )$(if $(HIDDEN),Hidden: $(HIDDEN)
 )Description: $(if $(Package/$(1)/description),$(Package/$(1)/description),$(TITLE))
-$(if $(URL),$(URL)
-)$(MAINTAINER)
 @@
 $(if $(Package/$(1)/config),Config:
 $(Package/$(1)/config)

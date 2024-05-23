@@ -1,9 +1,7 @@
+# SPDX-License-Identifier: GPL-2.0-only
 #
 # Copyright (C) 2009-2018 OpenWrt.org
-#
-# This is free software, licensed under the GNU General Public License v2.
-# See /LICENSE for more information.
-#
+
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/image.mk
 
@@ -126,11 +124,11 @@ endef
 # All DTB files are prefixed with "gemini-"
 define Device/Default
 	PROFILES := Default
+	DEVICE_DTS_DIR = $$(DTS_DIR)/gemini
 	KERNEL_DEPENDS = $$(wildcard $(DTS_DIR)/$$(DEVICE_DTS).dts)
 	KERNEL_NAME := zImage
 	KERNEL := kernel-bin | append-dtb
 	BLOCKSIZE := 128k
-	SUPPORTED_DEVICES := $(subst _,$(comma),$(1))
 endef
 
 # A reasonable set of default packages handling the NAS type
@@ -184,6 +182,7 @@ define Device/storlink-reference
 	COMPILE := copy-kernel-$(1).bin
 	COMPILE/copy-kernel-$(1).bin := copy-kernel.bin
 	IMAGES := factory.bin
+	FILESYSTEMS := squashfs
 	IMAGE/factory.bin := append-rootfs | pad-rootfs | pad-to 6144k | \
 		storlink-default-images $(1)
 	DEVICE_PACKAGES := $(GEMINI_NAS_PACKAGES)
@@ -217,8 +216,8 @@ TARGET_DEVICES += storlink_sl93512r
 
 # The wiliboard images need some changes to be functional and buildable.
 #
-# The dts would need to use the ecoscentric,redboot-fis-partitions partition
-# parser to get the correct partition offsets and size.
+# The dts would need to use the redboot-fis partition parser to get
+# the correct partition offsets and size.
 #
 # The mkfwimage2 call need to be adjusted to reflect the real size of kernel
 # and rootfs. It is expected that the OEM firmware adjusts the on flash

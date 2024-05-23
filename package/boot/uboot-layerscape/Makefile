@@ -8,13 +8,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=uboot-layerscape
-PKG_VERSION:=LSDK-20.04-update-290520
+PKG_VERSION:=lf-6.1.1-1.0.0
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=https://source.codeaurora.org/external/qoriq/qoriq-components/u-boot
-PKG_SOURCE_VERSION:=1e55b2f9e7f56b76569089b9e950f49c1579580e
-PKG_MIRROR_HASH:=46aace27e1367f40b424a64215d524a99c3bd62f49057550039e72d5a1ab7edb
+PKG_SOURCE_URL:=https://github.com/nxp-qoriq/u-boot
+PKG_SOURCE_VERSION:=lf-6.1.1-1.0.0
+PKG_MIRROR_HASH:=6cb3cd569f11f582375eb3af475a2a0d77fe602813337b64883ef01344be7bf6
 
 include $(INCLUDE_DIR)/u-boot.mk
 include $(INCLUDE_DIR)/package.mk
@@ -45,6 +45,16 @@ define U-Boot/fsl_ls1012a-frwy-sdboot
   ENV_SIZE:=0x10000
 endef
 
+define U-Boot/fsl_ls1028a-rdb
+  NAME:=NXP LS1028ARDB
+  UBOOT_CONFIG:=ls1028ardb_tfa
+endef
+
+define U-Boot/fsl_ls1028a-rdb-sdboot
+  NAME:=NXP LS1028ARDB SD Card Boot
+  UBOOT_CONFIG:=ls1028ardb_tfa
+endef
+
 define U-Boot/fsl_ls1043a-rdb
   NAME:=NXP LS1043ARDB
   UBOOT_CONFIG:=ls1043ardb_tfa
@@ -53,6 +63,16 @@ endef
 define U-Boot/fsl_ls1043a-rdb-sdboot
   NAME:=NXP LS1043ARDB SD Card Boot
   UBOOT_CONFIG:=ls1043ardb_tfa
+endef
+
+define U-Boot/fsl_ls1046a-frwy
+  NAME:=NXP LS1046AFRWY
+  UBOOT_CONFIG:=ls1046afrwy_tfa
+endef
+
+define U-Boot/fsl_ls1046a-frwy-sdboot
+  NAME:=NXP LS1046AFRWY SD Card Boot
+  UBOOT_CONFIG:=ls1046afrwy_tfa
 endef
 
 define U-Boot/fsl_ls1046a-rdb
@@ -78,6 +98,16 @@ endef
 define U-Boot/fsl_ls2088a-rdb
   NAME:=NXP LS2088ARDB
   UBOOT_CONFIG:=ls2088ardb_tfa
+endef
+
+define U-Boot/fsl_lx2160a-rdb
+  NAME:=NXP LX2160ARDB
+  UBOOT_CONFIG:=lx2160ardb_tfa
+endef
+
+define U-Boot/fsl_lx2160a-rdb-sdboot
+  NAME:=NXP LX2160ARDB SD Card Boot
+  UBOOT_CONFIG:=lx2160ardb_tfa
 endef
 
 define U-Boot/fsl_ls1021a-twr
@@ -107,13 +137,19 @@ UBOOT_TARGETS := \
   fsl_ls1012a-frdm \
   fsl_ls1012a-rdb \
   fsl_ls1012a-frwy-sdboot \
+  fsl_ls1028a-rdb \
+  fsl_ls1028a-rdb-sdboot \
   fsl_ls1043a-rdb \
   fsl_ls1043a-rdb-sdboot \
+  fsl_ls1046a-frwy \
+  fsl_ls1046a-frwy-sdboot \
   fsl_ls1046a-rdb \
   fsl_ls1046a-rdb-sdboot \
   fsl_ls1088a-rdb \
   fsl_ls1088a-rdb-sdboot \
   fsl_ls2088a-rdb \
+  fsl_lx2160a-rdb \
+  fsl_lx2160a-rdb-sdboot \
   fsl_ls1021a-twr \
   fsl_ls1021a-twr-sdboot \
   fsl_ls1021a-iot-sdboot

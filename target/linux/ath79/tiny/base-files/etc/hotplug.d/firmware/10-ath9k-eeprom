@@ -10,6 +10,9 @@ case "$FIRMWARE" in
 "ath9k-eeprom-pci-0000:00:00.0.bin")
 	case $board in
 	buffalo,whr-g301n|\
+	engenius,eap350-v1|\
+	engenius,ecb350-v1|\
+	engenius,enh202-v1|\
 	tplink,tl-wa701nd-v1|\
 	tplink,tl-wa730re-v1|\
 	tplink,tl-wa801nd-v1|\
@@ -33,7 +36,14 @@ case "$FIRMWARE" in
 	tplink,tl-wr740n-v3|\
 	tplink,tl-wr741-v1|\
 	tplink,tl-wr743nd-v1|\
-	tplink,tl-wr841-v7)
+	tplink,tl-wr841-v7|\
+	ubnt,airrouter|\
+	ubnt,bullet-m-ar7240|\
+	ubnt,bullet-m-ar7241|\
+	ubnt,nanobridge-m|\
+	ubnt,nanostation-loco-m|\
+	ubnt,nanostation-m|\
+	ubnt,picostation-m)
 		caldata_extract "art" 0x1000 0x1000
 		;;
 	pqi,air-pen)

@@ -6,7 +6,9 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ltq-dsl-base
-PKG_RELEASE:=2
+PKG_RELEASE:=3
+
+PKG_FLAGS:=nonshared
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -15,7 +17,7 @@ define Package/ltq-dsl-base
   CATEGORY:=Network
   TITLE:=DSL related files for Intel/Lantiq DSL Chipsets
   URL:=http://openwrt.org/
-  DEPENDS:=@TARGET_lantiq +jshn
+  DEPENDS:=@(TARGET_lantiq||TARGET_ipq40xx) +jshn
 endef
 
 define Package/ltq-dsl-base/description

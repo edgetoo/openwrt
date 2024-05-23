@@ -4,13 +4,13 @@
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
+#include <dt-bindings/leds/common.h>
 
 / {
 	model = "TP-Link TL-MR3040 V2";
 	compatible = "tplink,tl-mr3040-v2", "qca,ar9331";
 
 	aliases {
-		serial0 = &uart;
 		led-boot = &led_lan;
 		led-failsafe = &led_lan;
 		label-mac-device = &eth0;
@@ -23,13 +23,15 @@
 		pinctrl-0 = <&switch_led_disable_pins>;
 
 		wlan {
-			label = "green:wlan";
+			function = LED_FUNCTION_WLAN;
+			color = <LED_COLOR_ID_GREEN>;
 			gpios = <&gpio 26 GPIO_ACTIVE_LOW>;
 			linux,default-trigger = "phy0tpt";
 		};
 
 		led_lan: lan {
-			label = "green:lan";
+			function = LED_FUNCTION_LAN;
+			color = <LED_COLOR_ID_GREEN>;
 			gpios = <&gpio 17 GPIO_ACTIVE_LOW>;
 		};
 
@@ -73,7 +75,7 @@
 		regulator-name = "usb_vbus";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
-		gpio = <&gpio 18 GPIO_ACTIVE_HIGH>;
+		gpios = <&gpio 18 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 	};
 };
@@ -82,21 +84,10 @@
 	clock-frequency = <25000000>;
 };
 
-&uart {
-	status = "okay";
-};
-
 &usb {
-	#address-cells = <1>;
-	#size-cells = <0>;
 	dr_mode = "host";
 	vbus-supply = <&reg_usb_vbus>;
 	status = "okay";
-
-	hub_port: port@1 {
-		reg = <1>;
-		#trigger-source-cells = <0>;
-	};
 };
 
 &usb_phy {
@@ -105,8 +96,6 @@
 
 &spi {
 	status = "okay";
-
-	num-chipselects = <1>;
 
 	flash@0 {
 		compatible = "jedec,spi-nor";
@@ -122,6 +111,16 @@
 				label = "u-boot";
 				reg = <0x000000 0x020000>;
 				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					macaddr_uboot_1fc00: macaddr@1fc00 {
+						reg = <0x1fc00 0x6>;
+					};
+				};
 			};
 
 			partition@20000 {
@@ -142,7 +141,8 @@
 &eth0 {
 	status = "okay";
 
-	mtd-mac-address = <&uboot 0x1fc00>;
+	nvmem-cells = <&macaddr_uboot_1fc00>;
+	nvmem-cell-names = "mac-address";
 	gmac-config {
 		device = <&gmac>;
 
@@ -161,5 +161,6 @@
 	status = "okay";
 
 	mtd-cal-data = <&art 0x1000>;
-	mtd-mac-address = <&uboot 0x1fc00>;
+	nvmem-cells = <&macaddr_uboot_1fc00>;
+	nvmem-cell-names = "mac-address";
 };

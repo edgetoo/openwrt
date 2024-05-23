@@ -7,27 +7,34 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=pkgconf
-PKG_VERSION:=1.6.3
+PKG_VERSION:=2.1.1
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://distfiles.dereferenced.org/pkgconf
-PKG_HASH:=61f0b31b0d5ea0e862b454a80c170f57bad47879c0c42bd8de89200ff62ea210
+PKG_HASH:=1a00b7fa08c7b506a24c40f7cc8d9e0e59be748d731af8f7aa0b4d722bd8ccbe
 
-HOST_BUILD_PARALLEL:=1
+PKG_CPE_ID:=cpe:/a:pkgconf:pkgconf
 
 include $(INCLUDE_DIR)/host-build.mk
+include $(INCLUDE_DIR)/meson.mk
 
 unexport PKG_CONFIG
 
+HOSTCC := $(HOSTCC_NOCACHE)
+
+MESON_HOST_ARGS += \
+	-Ddefault_library=static \
+	-Dtests=disabled
+
 define Host/Install
-	$(MAKE) -C $(HOST_BUILD_DIR) install
+	$(call Host/Install/Meson)
 	mv $(STAGING_DIR_HOST)/bin/pkgconf $(STAGING_DIR_HOST)/bin/pkg-config.real
 	$(INSTALL_BIN) ./files/pkg-config $(STAGING_DIR_HOST)/bin/pkg-config
 endef
 
 define Host/Clean
-	-$(MAKE) -C $(HOST_BUILD_DIR) uninstall
-	$(call Host/Clean/Default)
+	rm -f $(STAGING_DIR_HOST)/bin/pkg-config.real $(STAGING_DIR_HOST)/bin/pkg-config
+	$(call Host/Clean/Meson)
 endef
 
 $(eval $(call HostBuild))

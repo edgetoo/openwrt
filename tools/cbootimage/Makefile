@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2017-2019 Tomasz Maciej Nowak <tomek_n@o2.pl>
+# Copyright (c) 2017-2019 Tomasz Maciej Nowak <tmn505@gmail.com>
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -12,7 +12,7 @@ PKG_VERSION := 1.8
 PKG_SOURCE_PROTO := git
 PKG_SOURCE_URL := https://github.com/NVIDIA/cbootimage.git
 PKG_SOURCE_VERSION := 7c9db585d06cce9efffa2a82245f233233680060
-PKG_MIRROR_HASH := 84d9abaaa3eddde05f506dc16effe1c9e18eb94727ed59c5e0a879baeb04e0b2
+PKG_MIRROR_HASH := e38b1e9581524fcabc7b24fff1c18d13f7e3a93accf73c55caf33832249bfd03
 
 HOST_BUILD_PARALLEL := 1
 

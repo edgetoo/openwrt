@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later OR MIT
 
-#include "qca955x.dtsi"
+#include "qca955x_senao_loader.dtsi"
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
+#include <dt-bindings/leds/common.h>
 
 / {
-	model = "ALLNET ALL-WAP02860AC";
 	compatible = "allnet,all-wap02860ac", "qca,qca9558";
+	model = "ALLNET ALL-WAP02860AC";
 
 	aliases {
 		label-mac-device = &eth0;
@@ -22,8 +23,9 @@
 
 		reset {
 			label = "reset";
-			linux,code = <KEY_RESTART>;
 			gpios = <&gpio 17 GPIO_ACTIVE_LOW>;
+			debounce-interval = <60>;
+			linux,code = <KEY_RESTART>;
 		};
 	};
 
@@ -31,7 +33,8 @@
 		compatible = "gpio-leds";
 
 		led_power: power {
-			label = "amber:power";
+			function = LED_FUNCTION_POWER;
+			color = <LED_COLOR_ID_AMBER>;
 			gpios = <&gpio 22 GPIO_ACTIVE_LOW>;
 			default-state = "on";
 		};
@@ -49,7 +52,8 @@
 		};
 
 		wps {
-			label = "blue:wps";
+			function = LED_FUNCTION_WPS;
+			color = <LED_COLOR_ID_BLUE>;
 			gpios = <&gpio 19 GPIO_ACTIVE_LOW>;
 		};
 	};
@@ -58,11 +62,13 @@
 &eth0 {
 	status = "okay";
 
-	pll-data = <0x8e000000 0x80000101 0x80001313>;
-	phy-handle = <&phy5>;
-	phy-mode = "rgmii-rxid";
+	nvmem-cells = <&macaddr_art_0>;
+	nvmem-cell-names = "mac-address";
 
-	mtd-mac-address = <&art 0x0>;
+	phy-handle = <&phy5>;
+	phy-mode = "rgmii-id";
+
+	pll-data = <0x82000000 0x80000101 0x80001313>;
 };
 
 &mdio0 {
@@ -75,81 +81,45 @@
 	};
 };
 
-&pcie0 {
-	status = "okay";
+&partitions {
+	art: partition@ff0000 {
+		label = "art";
+		reg = <0xff0000 0x010000>;
+		read-only;
 
-	wifi@0,0 {
-		compatible = "qcom,ath10k";
-		reg = <0 0 0 0 0>;
-	};
-};
-
-&pll {
-	clocks = <&extosc>;
-};
-
-&spi {
-	status = "okay";
-
-	num-cs = <1>;
-
-	flash@0 {
-		compatible = "jedec,spi-nor";
-		reg = <0>;
-		spi-max-frequency = <25000000>;
-
-		partitions {
-			compatible = "fixed-partitions";
+		nvmem-layout {
+			compatible = "fixed-layout";
 			#address-cells = <1>;
 			#size-cells = <1>;
 
-			partition@0 {
-				label = "u-boot";
-				reg = <0x000000 0x040000>;
-				read-only;
+			macaddr_art_0: macaddr@0 {
+				compatible = "mac-base";
+				reg = <0x0 0x6>;
+				#nvmem-cell-cells = <1>;
 			};
 
-			partition@40000 {
-				label = "u-boot-env";
-				reg = <0x040000 0x010000>;
-			};
-
-			partition@50000 {
-				label = "custom";
-				reg = <0x050000 0x050000>;
-				read-only;
-			};
-
-			partition@a0000 {
-				compatible = "denx,uimage";
-				label = "firmware";
-				reg = <0x0a0000 0xcd0000>;
-			};
-
-			partition@d70000 {
-				label = "failsafe";
-				reg = <0xd70000 0x280000>;
-				read-only;
-			};
-
-			art: partition@ff0000 {
-				label = "art";
-				reg = <0xff0000 0x010000>;
-				read-only;
+			cal_art_5000: calibration@5000 {
+				reg = <0x5000 0x844>;
 			};
 		};
 	};
-};
-
-&uart {
-	status = "okay";
 };
 
 &wmac {
 	status = "okay";
 
 	mtd-cal-data = <&art 0x1000>;
-	mtd-mac-address = <&art 0x0>;
-	mtd-mac-address-increment = <1>;
-	qca-no-eeprom;
+	nvmem-cells = <&macaddr_art_0 1>;
+	nvmem-cell-names = "mac-address";
+};
+
+&pcie0 {
+	status = "okay";
+
+	wifi@0,0 {
+		compatible = "qcom,ath10k";
+		reg = <0x0000 0 0 0 0>;
+		nvmem-cells = <&cal_art_5000>, <&macaddr_art_0 2>;
+		nvmem-cell-names = "calibration", "mac-address";
+	};
 };

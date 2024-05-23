@@ -8,16 +8,16 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=binutils
-PKG_VERSION:=2.34
+PKG_VERSION:=2.42
 PKG_RELEASE:=1
 
 PKG_SOURCE_URL:=@GNU/binutils
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_VERSION:=$(PKG_VERSION)
-PKG_HASH:=f00b0e8803dc9bab1e2165bd568528135be734df3fabf8d0161828cd56028952
+PKG_HASH:=f6e4d41fd5fc778b06b7891457b3620da5ecea1006c6a4a41ae998109f85a800
 
-PKG_FIXUP:=autoreconf
-PKG_LIBTOOL_PATHS:=. gas bfd opcodes gprof binutils ld libiberty gold intl
+PKG_FIXUP:=patch-libtool
+PKG_LIBTOOL_PATHS:=. gas bfd opcodes gprof gprofng binutils ld libiberty gold intl libctf libsframe
 PKG_REMOVE_FILES:=libtool.m4
 PKG_INSTALL:=1
 
@@ -25,7 +25,7 @@ PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 PKG_LICENSE:=GPL-3.0+
 PKG_CPE_ID:=cpe:/a:gnu:binutils
 PKG_BUILD_PARALLEL:=1
-PKG_USE_MIPS16:=0
+PKG_BUILD_FLAGS:=no-mips16
 
 include $(INCLUDE_DIR)/nls.mk
 include $(INCLUDE_DIR)/package.mk
@@ -34,7 +34,7 @@ define Package/libbfd
   SECTION:=libs
   CATEGORY:=Libraries
   TITLE:=libbfd
-  DEPENDS:=+zlib $(ICONV_DEPENDS) $(INTL_DEPENDS)
+  DEPENDS:=+zlib $(INTL_DEPENDS)
 endef
 
 define Package/libctf
@@ -79,13 +79,19 @@ endef
 
 TARGET_CFLAGS += $(FPIC) -Wno-unused-value
 
+TARGET_LDFLAGS += $(if $(INTL_FULL),-lintl)
+
 CONFIGURE_ARGS += \
 	--host=$(REAL_GNU_TARGET_NAME) \
 	--target=$(REAL_GNU_TARGET_NAME) \
 	--enable-shared \
 	--enable-install-libiberty \
 	--enable-install-libbfd \
-	--enable-install-libctf
+	--enable-install-libctf \
+	--with-system-zlib \
+	--without-zstd \
+	--without-msgpack \
+	--disable-gprofng
 
 define Build/Install
 	$(call Build/Install/Default)
@@ -103,6 +109,7 @@ endef
 define Package/libbfd/install
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libbfd*.so* $(1)/usr/lib/
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libsframe*.so* $(1)/usr/lib/
 endef
 
 define Package/libctf/install

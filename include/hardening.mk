@@ -1,9 +1,6 @@
+# SPDX-License-Identifier: GPL-2.0-only
 #
-# Copyright (C) 2015 OpenWrt.org
-#
-# This is free software, licensed under the GNU General Public License v2.
-# See /LICENSE for more information.
-#
+# Copyright (C) 2015-2020 OpenWrt.org
 
 PKG_CHECK_FORMAT_SECURITY ?= 1
 PKG_ASLR_PIE ?= 1
@@ -37,6 +34,11 @@ endif
 ifdef CONFIG_PKG_CC_STACKPROTECTOR_STRONG
   ifeq ($(strip $(PKG_SSP)),1)
     TARGET_CFLAGS += -fstack-protector-strong
+  endif
+endif
+ifdef CONFIG_PKG_CC_STACKPROTECTOR_ALL
+  ifeq ($(strip $(PKG_SSP)),1)
+    TARGET_CFLAGS += -fstack-protector-all
   endif
 endif
 ifdef CONFIG_PKG_FORTIFY_SOURCE_1

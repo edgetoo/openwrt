@@ -1,11 +1,8 @@
+# SPDX-License-Identifier: GPL-2.0-only
 #
-# Copyright (C) 2006 OpenWrt.org
-#
-# This is free software, licensed under the GNU General Public License v2.
-# See /LICENSE for more information.
-#
+# Copyright (C) 2006-2020 OpenWrt.org
 
-PKG_DEFAULT_DEPENDS = +libc +USE_GLIBC:librt +USE_GLIBC:libpthread
+PKG_DEFAULT_DEPENDS = +libc
 
 ifneq ($(PKG_NAME),toolchain)
   PKG_FIXUP_DEPENDS = $(if $(filter kmod-%,$(1)),$(2),$(PKG_DEFAULT_DEPENDS) $(filter-out $(PKG_DEFAULT_DEPENDS),$(2)))
@@ -23,10 +20,10 @@ define Package/Default
   PROVIDES:=
   EXTRA_DEPENDS:=
   MAINTAINER:=$(PKG_MAINTAINER)
-  SOURCE:=$(patsubst $(TOPDIR)/%,%,$(CURDIR))
+  SOURCE:=$(patsubst $(TOPDIR)/%,%,$(patsubst $(TOPDIR)/package/%,feeds/base/%,$(CURDIR)))
   ifneq ($(PKG_VERSION),)
     ifneq ($(PKG_RELEASE),)
-      VERSION:=$(PKG_VERSION)-$(PKG_RELEASE)
+      VERSION:=$(PKG_VERSION)-r$(PKG_RELEASE)
     else
       VERSION:=$(PKG_VERSION)
     endif
@@ -52,7 +49,7 @@ define Package/Default
   KCONFIG:=
   BUILDONLY:=
   HIDDEN:=
-  URL:=
+  URL:=$(PKG_URL)
   VARIANT:=
   DEFAULT_VARIANT:=
   USERID:=
@@ -83,6 +80,7 @@ CONFIGURE_ARGS = \
 		--target=$(GNU_TARGET_NAME) \
 		--host=$(GNU_TARGET_NAME) \
 		--build=$(GNU_HOST_NAME) \
+		--disable-dependency-tracking \
 		--program-prefix="" \
 		--program-suffix="" \
 		--prefix=$(CONFIGURE_PREFIX) \

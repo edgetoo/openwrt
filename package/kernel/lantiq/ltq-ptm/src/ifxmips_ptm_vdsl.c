@@ -77,7 +77,11 @@ static int ptm_stop(struct net_device *);
   static int ptm_napi_poll(struct napi_struct *, int);
 static int ptm_hard_start_xmit(struct sk_buff *, struct net_device *);
 static int ptm_ioctl(struct net_device *, struct ifreq *, int);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
 static void ptm_tx_timeout(struct net_device *);
+#else
+static void ptm_tx_timeout(struct net_device *, unsigned int txqueue);
+#endif
 
 static inline struct sk_buff* alloc_skb_rx(void);
 static inline struct sk_buff* alloc_skb_tx(unsigned int);
@@ -125,7 +129,11 @@ static char *g_net_dev_name[1] = {"dsl0"};
 
 static int g_ptm_prio_queue_map[8];
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,9,0)
 static DECLARE_TASKLET(g_swap_desc_tasklet, do_swap_desc_tasklet, 0);
+#else
+static DECLARE_TASKLET_OLD(g_swap_desc_tasklet, do_swap_desc_tasklet);
+#endif
 
 
 unsigned int ifx_ptm_dbg_enable = DBG_ENABLE_MASK_ERR;
@@ -138,20 +146,27 @@ unsigned int ifx_ptm_dbg_enable = DBG_ENABLE_MASK_ERR;
 
 static void ptm_setup(struct net_device *dev, int ndev)
 {
+    u8 addr[ETH_ALEN];
+
     netif_carrier_off(dev);
 
     dev->netdev_ops      = &g_ptm_netdev_ops;
     /* Allow up to 1508 bytes, for RFC4638 */
     dev->max_mtu         = ETH_DATA_LEN + 8;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,19,0))
     netif_napi_add(dev, &g_ptm_priv_data.itf[ndev].napi, ptm_napi_poll, 16);
+#else
+    netif_napi_add_weight(dev, &g_ptm_priv_data.itf[ndev].napi, ptm_napi_poll, 16);
+#endif
     dev->watchdog_timeo  = ETH_WATCHDOG_TIMEOUT;
 
-    dev->dev_addr[0] = 0x00;
-    dev->dev_addr[1] = 0x20;
-	dev->dev_addr[2] = 0xda;
-	dev->dev_addr[3] = 0x86;
-	dev->dev_addr[4] = 0x23;
-	dev->dev_addr[5] = 0x75 + ndev;
+    addr[0] = 0x00;
+    addr[1] = 0x20;
+    addr[2] = 0xda;
+    addr[3] = 0x86;
+    addr[4] = 0x23;
+    addr[5] = 0x75 + ndev;
+    eth_hw_addr_set(dev, addr);
 }
 
 static struct net_device_stats *ptm_get_stats(struct net_device *dev)
@@ -451,7 +466,11 @@ static int ptm_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
     return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
 static void ptm_tx_timeout(struct net_device *dev)
+#else
+static void ptm_tx_timeout(struct net_device *dev, unsigned int txqueue)
+#endif
 {
     ASSERT(dev == g_net_dev[0], "incorrect device");
 
@@ -545,7 +564,6 @@ static inline int get_tx_desc(unsigned int itf, unsigned int *f_full)
 static irqreturn_t mailbox_irq_handler(int irq, void *dev_id)
 {
     unsigned int isr;
-    int i;
 
     isr = IFX_REG_R32(MBOX_IGU1_ISR);
     IFX_REG_W32(isr, MBOX_IGU1_ISRC);
@@ -621,12 +639,15 @@ static void do_swap_desc_tasklet(unsigned long arg)
 static inline int ifx_ptm_version(char *buf)
 {
     int len = 0;
-    unsigned int major, minor;
+    unsigned int major, mid, minor;
 
-    ifx_ptm_get_fw_ver(&major, &minor);
+    ifx_ptm_get_fw_ver(&major, &mid, &minor);
 
-    len += sprintf(buf + len, "PTM %d.%d.%d", IFX_PTM_VER_MAJOR, IFX_PTM_VER_MID, IFX_PTM_VER_MINOR);
-    len += sprintf(buf + len, "    PTM (E1) firmware version %d.%d\n", major, minor);
+    len += ifx_drv_ver(buf + len, "PTM", IFX_PTM_VER_MAJOR, IFX_PTM_VER_MID, IFX_PTM_VER_MINOR);
+    if ( mid == ~0 )
+        len += sprintf(buf + len, "    PTM (E1) firmware version %u.%u\n", major, minor);
+    else
+        len += sprintf(buf + len, "    PTM (E1) firmware version %u.%u.%u\n", major, mid, minor);
 
     return len;
 }
@@ -963,7 +984,7 @@ static int ltq_ptm_probe(struct platform_device *pdev)
 {
     int ret;
     int i;
-    char ver_str[128];
+    char ver_str[256];
     struct port_cell_info port_cell = {0};
 
     ret = init_priv_data();
@@ -992,8 +1013,14 @@ static int ltq_ptm_probe(struct platform_device *pdev)
             goto REGISTER_NETDEV_FAIL;
     }
 
+    g_ptm_priv_data.irq = platform_get_irq(pdev, 0);
+    if (g_ptm_priv_data.irq < 0) {
+        err("platform_get_irq fail");
+        goto REQUEST_IRQ_PPE_MAILBOX_IGU1_INT_FAIL;
+    }
+
     /*  register interrupt handler  */
-    ret = request_irq(PPE_MAILBOX_IGU1_INT, mailbox_irq_handler, 0, "ptm_mailbox_isr", &g_ptm_priv_data);
+    ret = request_irq(g_ptm_priv_data.irq, mailbox_irq_handler, 0, "ptm_mailbox_isr", &g_ptm_priv_data);
     if ( ret ) {
         if ( ret == -EBUSY ) {
             err("IRQ may be occupied by other driver, please reconfig to disable it.");
@@ -1003,7 +1030,7 @@ static int ltq_ptm_probe(struct platform_device *pdev)
         }
         goto REQUEST_IRQ_PPE_MAILBOX_IGU1_INT_FAIL;
     }
-    disable_irq(PPE_MAILBOX_IGU1_INT);
+    disable_irq(g_ptm_priv_data.irq);
 
     ret = ifx_pp32_start(0);
     if ( ret ) {
@@ -1013,7 +1040,7 @@ static int ltq_ptm_probe(struct platform_device *pdev)
     IFX_REG_W32(1 << 16, MBOX_IGU1_IER);    //  enable SWAP interrupt
     IFX_REG_W32(~0, MBOX_IGU1_ISRC);
 
-    enable_irq(PPE_MAILBOX_IGU1_INT);
+    enable_irq(g_ptm_priv_data.irq);
 
     ifx_mei_atm_showtime_check(&g_showtime, &port_cell, &g_xdata_addr);
     if ( g_showtime ) {
@@ -1031,7 +1058,7 @@ static int ltq_ptm_probe(struct platform_device *pdev)
     return 0;
 
 PP32_START_FAIL:
-    free_irq(PPE_MAILBOX_IGU1_INT, &g_ptm_priv_data);
+    free_irq(g_ptm_priv_data.irq, &g_ptm_priv_data);
 REQUEST_IRQ_PPE_MAILBOX_IGU1_INT_FAIL:
     i = ARRAY_SIZE(g_net_dev);
 REGISTER_NETDEV_FAIL:
@@ -1059,7 +1086,7 @@ static int ltq_ptm_remove(struct platform_device *pdev)
 
     ifx_pp32_stop(0);
 
-    free_irq(PPE_MAILBOX_IGU1_INT, &g_ptm_priv_data);
+    free_irq(g_ptm_priv_data.irq, &g_ptm_priv_data);
 
     for ( i = 0; i < ARRAY_SIZE(g_net_dev); i++ )
         unregister_netdev(g_net_dev[i]);

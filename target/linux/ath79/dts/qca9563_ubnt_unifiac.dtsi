@@ -13,7 +13,7 @@
 		led-upgrade = &led_blue;
 	};
 
-	leds {
+	leds: leds {
 		compatible = "gpio-leds";
 
 		led_white: led_white {
@@ -39,17 +39,19 @@
 	};
 };
 
-&uart {
-	status = "okay";
-};
-
 &pcie {
 	status = "okay";
+
+	wifi@0,0 {
+		compatible = "qcom,ath10k";
+		reg = <0x0000 0 0 0 0>;
+		nvmem-cells = <&cal_art_5000>;
+		nvmem-cell-names = "calibration";
+	};
 };
 
 &spi {
 	status = "okay";
-	num-cs = <1>;
 
 	flash@0 {
 		compatible = "jedec,spi-nor";
@@ -74,15 +76,10 @@
 			};
 
 			partition@70000 {
+				/* Combine kernel0 & kernel1 */
 				label = "firmware";
-				reg = <0x070000 0x790000>;
+				reg = <0x070000 0xf20000>;
 				compatible = "denx,uimage";
-			};
-
-			partition@800000 {
-				label = "ubnt-airos";
-				reg = <0x800000 0x790000>;
-				read-only;
 			};
 
 			partition@f90000 {
@@ -100,6 +97,20 @@
 				label = "art";
 				reg = <0xff0000 0x010000>;
 				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					macaddr_art_0: macaddr@0 {
+						reg = <0x0 0x6>;
+					};
+
+					cal_art_5000: calibration@5000 {
+						reg = <0x5000 0x844>;
+					};
+				};
 			};
 		};
 	};

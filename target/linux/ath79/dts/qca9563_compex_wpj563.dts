@@ -65,8 +65,6 @@
 &spi {
 	status = "okay";
 
-	num-cs = <1>;
-
 	flash@0 {
 		compatible = "jedec,spi-nor";
 		reg = <0>;
@@ -81,6 +79,16 @@
 				label = "u-boot";
 				reg = <0x000000 0x030000>;
 				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					macaddr_uboot_2e010: macaddr@2e010 {
+						reg = <0x2e010 0x6>;
+					};
+				};
 			};
 
 			partition@30000 {
@@ -101,8 +109,6 @@
 &mdio0 {
 	status = "okay";
 
-	phy-mask = <0>;
-
 	phy0: ethernet-phy@0 {
 		reg = <0>;
 		phy-mode = "sgmii";
@@ -120,7 +126,8 @@
 
 	pll-data = <0x03000101 0x00000101 0x00001919>;
 
-	mtd-mac-address = <&uboot 0x2e010>;
+	nvmem-cells = <&macaddr_uboot_2e010>;
+	nvmem-cell-names = "mac-address";
 	phy-mode = "sgmii";
 	phy-handle = <&phy0>;
 };
@@ -133,7 +140,11 @@
 	status = "okay";
 };
 
-&uart {
+&usb_phy1 {
+	status = "okay";
+};
+
+&usb1 {
 	status = "okay";
 };
 

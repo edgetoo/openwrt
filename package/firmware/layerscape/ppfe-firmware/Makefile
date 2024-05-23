@@ -8,13 +8,15 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ppfe
-PKG_VERSION:=LSDK-20.04
+PKG_VERSION:=lf-6.1.1-1.0.0
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=https://github.com/NXP/qoriq-engine-pfe-bin.git
-PKG_SOURCE_VERSION:=d3a8ef0760c54ddc243039c86389497e37be90ab
-PKG_MIRROR_HASH:=64be93b8249d298e7b5fd0846787835f0659b6ab6c55b40b809366c79e272eb8
+PKG_SOURCE_URL:=https://github.com/nxp-qoriq/qoriq-engine-pfe-bin
+PKG_SOURCE_VERSION:=lf-6.1.1-1.0.0
+PKG_MIRROR_HASH:=59f5660f1b93314e3e073053195719eab7361f07d1a9e02896f9356b1a615873
+
+PKG_FLAGS:=nonshared
 
 include $(INCLUDE_DIR)/package.mk
 

@@ -8,20 +8,80 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=mbedtls
-PKG_VERSION:=2.16.8
+PKG_VERSION:=3.6.0
 PKG_RELEASE:=1
-PKG_USE_MIPS16:=0
+PKG_BUILD_FLAGS:=no-mips16 gc-sections no-lto
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://codeload.github.com/ARMmbed/mbedtls/tar.gz/v$(PKG_VERSION)?
-PKG_HASH:=fe9e3b15c3375943bdfebbbb20dd6b4f1147b3b5d926248bd835d73247407430
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL=https://github.com/Mbed-TLS/mbedtls.git
+PKG_SOURCE_VERSION:=2ca6c285a0dd3f33982dd57299012dacab1ff206
+PKG_MIRROR_HASH:=a684012126590b4e0b6ab41e244cc2af0d2bcfc4b6c94bf42fc37d2d08f0553e
 
-PKG_BUILD_PARALLEL:=1
 PKG_LICENSE:=GPL-2.0-or-later
 PKG_LICENSE_FILES:=gpl-2.0.txt
 PKG_CPE_ID:=cpe:/a:arm:mbed_tls
 
-PKG_CONFIG_DEPENDS:=CONFIG_LIBMBEDTLS_DEBUG_C
+MBEDTLS_BUILD_OPTS_CURVES= \
+  CONFIG_MBEDTLS_ECP_DP_SECP192R1_ENABLED \
+  CONFIG_MBEDTLS_ECP_DP_SECP224R1_ENABLED \
+  CONFIG_MBEDTLS_ECP_DP_SECP256R1_ENABLED \
+  CONFIG_MBEDTLS_ECP_DP_SECP384R1_ENABLED \
+  CONFIG_MBEDTLS_ECP_DP_SECP521R1_ENABLED \
+  CONFIG_MBEDTLS_ECP_DP_SECP192K1_ENABLED \
+  CONFIG_MBEDTLS_ECP_DP_SECP224K1_ENABLED \
+  CONFIG_MBEDTLS_ECP_DP_SECP256K1_ENABLED \
+  CONFIG_MBEDTLS_ECP_DP_BP256R1_ENABLED \
+  CONFIG_MBEDTLS_ECP_DP_BP384R1_ENABLED \
+  CONFIG_MBEDTLS_ECP_DP_BP512R1_ENABLED \
+  CONFIG_MBEDTLS_ECP_DP_CURVE25519_ENABLED \
+  CONFIG_MBEDTLS_ECP_DP_CURVE448_ENABLED
+
+MBEDTLS_BUILD_OPTS_CIPHERS= \
+  CONFIG_MBEDTLS_AES_C \
+  CONFIG_MBEDTLS_CAMELLIA_C \
+  CONFIG_MBEDTLS_CCM_C \
+  CONFIG_MBEDTLS_CMAC_C \
+  CONFIG_MBEDTLS_DES_C \
+  CONFIG_MBEDTLS_GCM_C \
+  CONFIG_MBEDTLS_KEY_EXCHANGE_PSK_ENABLED \
+  CONFIG_MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED \
+  CONFIG_MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED \
+  CONFIG_MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED \
+  CONFIG_MBEDTLS_KEY_EXCHANGE_RSA_ENABLED \
+  CONFIG_MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED \
+  CONFIG_MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED \
+  CONFIG_MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED \
+  CONFIG_MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED \
+  CONFIG_MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED \
+  CONFIG_MBEDTLS_NIST_KW_C \
+  CONFIG_MBEDTLS_RIPEMD160_C \
+  CONFIG_MBEDTLS_RSA_NO_CRT \
+  CONFIG_MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED \
+  CONFIG_MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED \
+  CONFIG_MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_EPHEMERAL_ENABLED
+
+MBEDTLS_BUILD_OPTS= \
+  $(MBEDTLS_BUILD_OPTS_CURVES) \
+  $(MBEDTLS_BUILD_OPTS_CIPHERS) \
+  CONFIG_MBEDTLS_CIPHER_MODE_OFB \
+  CONFIG_MBEDTLS_CIPHER_MODE_XTS \
+  CONFIG_MBEDTLS_DEBUG_C \
+  CONFIG_MBEDTLS_ENTROPY_FORCE_SHA256 \
+  CONFIG_MBEDTLS_HKDF_C \
+  CONFIG_MBEDTLS_PLATFORM_C \
+  CONFIG_MBEDTLS_SELF_TEST \
+  CONFIG_MBEDTLS_SSL_RENEGOTIATION \
+  CONFIG_MBEDTLS_THREADING_C \
+  CONFIG_MBEDTLS_THREADING_PTHREAD \
+  CONFIG_MBEDTLS_VERSION_C \
+  CONFIG_MBEDTLS_VERSION_FEATURES \
+  CONFIG_MBEDTLS_PSA_CRYPTO_CLIENT \
+  CONFIG_MBEDTLS_DEPRECATED_WARNING \
+  CONFIG_MBEDTLS_SSL_PROTO_TLS1_2 \
+  CONFIG_MBEDTLS_SSL_PROTO_TLS1_3 \
+  CONFIG_MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+
+PKG_CONFIG_DEPENDS := $(MBEDTLS_BUILD_OPTS)
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
@@ -42,21 +102,12 @@ $(call Package/mbedtls/Default)
   CATEGORY:=Libraries
   SUBMENU:=SSL
   TITLE+= (library)
-  ABI_VERSION:=12
+  ABI_VERSION:=21
+  MENU:=1
 endef
 
 define Package/libmbedtls/config
-config LIBMBEDTLS_DEBUG_C
-	depends on PACKAGE_libmbedtls
-	bool "Enable debug functions"
-	default n
-	help
-	 This option enables mbedtls library's debug functions.
-
-	 It increases the uncompressed libmbedtls binary size
-	 by around 60 KiB (for an ARMv5 platform).
-
-	 Usually, you don't need this, so don't select this if you're unsure.
+	source "$(SOURCE)/Config.in"
 endef
 
 define Package/mbedtls-util
@@ -78,33 +129,40 @@ This package contains mbedtls helper programs for private key and
 CSR generation (gen_key, cert_req)
 endef
 
-PKG_INSTALL:=1
-
-TARGET_CFLAGS += -ffunction-sections -fdata-sections
 TARGET_CFLAGS := $(filter-out -O%,$(TARGET_CFLAGS))
 
 CMAKE_OPTIONS += \
+	-DCMAKE_POSITION_INDEPENDENT_CODE=ON \
 	-DUSE_SHARED_MBEDTLS_LIBRARY:Bool=ON \
 	-DENABLE_TESTING:Bool=OFF \
 	-DENABLE_PROGRAMS:Bool=ON
 
-define Build/Configure
-	$(Build/Configure/Default)
+define Build/Prepare
+       $(call Build/Prepare/Default)
 
-	awk 'BEGIN { rc = 1 } \
-	     /#define MBEDTLS_DEBUG_C/ { $$$$0 = "$(if $(CONFIG_LIBMBEDTLS_DEBUG_C),,// )#define MBEDTLS_DEBUG_C"; rc = 0 } \
-	     { print } \
-	     END { exit(rc) }' $(PKG_BUILD_DIR)/include/mbedtls/config.h \
-	     >$(PKG_BUILD_DIR)/include/mbedtls/config.h.new && \
-	mv $(PKG_BUILD_DIR)/include/mbedtls/config.h.new $(PKG_BUILD_DIR)/include/mbedtls/config.h
+       $(if $(strip $(foreach opt,$(MBEDTLS_BUILD_OPTS),$($(opt)))),
+	 $(foreach opt,$(MBEDTLS_BUILD_OPTS),
+	 $(PKG_BUILD_DIR)/scripts/config.py \
+	 -f $(PKG_BUILD_DIR)/include/mbedtls/mbedtls_config.h \
+	 $(if $($(opt)),set,unset) $(patsubst CONFIG_%,%,$(opt))),)
 endef
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include
-	$(CP) $(PKG_INSTALL_DIR)/usr/include/mbedtls $(1)/usr/include/
+	$(CP) \
+		$(PKG_INSTALL_DIR)/usr/include/mbedtls \
+		$(PKG_INSTALL_DIR)/usr/include/psa \
+		$(1)/usr/include/
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/lib*.so* $(1)/usr/lib/
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/lib*.a $(1)/usr/lib/
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/cmake $(1)/usr/lib/
+	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
+	$(CP) \
+		$(PKG_INSTALL_DIR)/usr/lib/pkgconfig/mbedcrypto.pc \
+		$(PKG_INSTALL_DIR)/usr/lib/pkgconfig/mbedtls.pc \
+		$(PKG_INSTALL_DIR)/usr/lib/pkgconfig/mbedx509.pc \
+		$(1)/usr/lib/pkgconfig/
 endef
 
 define Package/libmbedtls/install

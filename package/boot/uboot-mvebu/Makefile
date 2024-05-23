@@ -8,10 +8,10 @@
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
-PKG_VERSION:=2020.10
+PKG_VERSION:=2024.04
 PKG_RELEASE:=1
 
-PKG_HASH:=0d481bbdc05c0ee74908ec2f56a6daa53166cc6a78a0e4fac2ac5d025770a622
+PKG_HASH:=18a853fe39fad7ad03a90cc2d4275aeaed6da69735defac3492b80508843dd4a
 
 include $(INCLUDE_DIR)/u-boot.mk
 include $(INCLUDE_DIR)/package.mk
@@ -26,14 +26,22 @@ define U-Boot/clearfog
   NAME:=SolidRun ClearFog A1
   BUILD_DEVICES:=solidrun_clearfog-base-a1 solidrun_clearfog-pro-a1
   BUILD_SUBTARGET:=cortexa9
-  UBOOT_IMAGE:=u-boot-spl.kwb
+  UBOOT_IMAGE:=u-boot-with-spl.kwb
 endef
 
 define U-Boot/helios4
   NAME:=Kobol Helios 4
   BUILD_DEVICES:=kobol_helios4
   BUILD_SUBTARGET:=cortexa9
-  UBOOT_IMAGE:=u-boot-spl.kwb
+  UBOOT_IMAGE:=u-boot-with-spl.kwb
+endef
+
+define U-Boot/omnia
+  NAME:=Turris Omnia
+  BUILD_DEVICES:=cznic_turris-omnia
+  BUILD_SUBTARGET:=cortexa9
+  UBOOT_CONFIG:=turris_omnia
+  UBOOT_IMAGE:=u-boot-with-spl.kwb
 endef
 
 define U-Boot/espressobin
@@ -42,33 +50,23 @@ define U-Boot/espressobin
   UBOOT_CONFIG:=mvebu_espressobin-88f3720
 endef
 
-define U-Boot/espressobin-emmc
-  NAME:=Marvell ESPRESSObin
-  BUILD_SUBTARGET:=cortexa53
-  UBOOT_CONFIG:=mvebu_espressobin-88f3720
-  UBOOT_MAKE_FLAGS+=DEVICE_TREE=armada-3720-espressobin-emmc
-endef
-
 define U-Boot/uDPU
   NAME:=Methode uDPU
+  BUILD_SUBTARGET:=cortexa53
+endef
+
+define U-Boot/eDPU
+  NAME:=Methode eDPU
   BUILD_SUBTARGET:=cortexa53
 endef
 
 UBOOT_TARGETS:= \
 	clearfog \
 	helios4 \
+	omnia \
 	espressobin \
-	espressobin-emmc \
-	uDPU
-
-Build/Exports:=$(Host/Exports)
-
-define Build/Configure
-	# enable additional options beyond <device>_defconfig
-	echo CONFIG_CMD_SETEXPR=y >> $(PKG_BUILD_DIR)/configs/$(UBOOT_CONFIG)_defconfig
-
-	$(call Build/Configure/U-Boot)
-endef
+	uDPU \
+	eDPU
 
 define Package/u-boot/install
 	$(if $(findstring cortexa53,$(BUILD_SUBTARGET)),,$(Package/u-boot/install/default))

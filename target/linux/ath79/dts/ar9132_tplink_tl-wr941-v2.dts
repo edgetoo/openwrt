@@ -4,6 +4,7 @@
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
+#include <dt-bindings/leds/common.h>
 
 / {
 	compatible = "tplink,tl-wr941-v2", "qca,ar9132";
@@ -54,7 +55,8 @@
 		};
 
 		wlan {
-			label = "green:wlan";
+			function = LED_FUNCTION_WLAN;
+			color = <LED_COLOR_ID_GREEN>;
 			gpios = <&gpio 9 GPIO_ACTIVE_LOW>;
 			linux,default-trigger = "phy0tpt";
 		};
@@ -99,15 +101,10 @@
 
 			port@5 {
 				reg = <5>;
-				label = "cpu";
 				ethernet = <&eth0>;
 			};
 		};
 	};
-};
-
-&uart {
-	status = "okay";
 };
 
 &spi {
@@ -127,6 +124,16 @@
 				label = "u-boot";
 				reg = <0x000000 0x20000>;
 				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					macaddr_uboot_1fc00: macaddr@1fc00 {
+						reg = <0x1fc00 0x6>;
+					};
+				};
 			};
 
 			partition@20000 {
@@ -148,7 +155,8 @@
 	status = "okay";
 
 	phy-mode = "rmii";
-	mtd-mac-address = <&uboot 0x1fc00>;
+	nvmem-cells = <&macaddr_uboot_1fc00>;
+	nvmem-cell-names = "mac-address";
 
 	fixed-link {
 		speed = <100>;
@@ -159,5 +167,6 @@
 &wmac {
 	status = "okay";
 	mtd-cal-data = <&art 0x1000>;
-	mtd-mac-address = <&uboot 0x1fc00>;
+	nvmem-cells = <&macaddr_uboot_1fc00>;
+	nvmem-cell-names = "mac-address";
 };

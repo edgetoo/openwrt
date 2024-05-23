@@ -1,9 +1,7 @@
+# SPDX-License-Identifier: GPL-2.0-only
 #
 # Copyright (C) 2013-2014 OpenWrt.org
-#
-# This is free software, licensed under the GNU General Public License v2.
-# See /LICENSE for more information.
-#
+
 include $(TOPDIR)/rules.mk
 
 ARCH:=arm
@@ -11,8 +9,10 @@ BOARD:=mxs
 BOARDNAME:=Freescale i.MX23/i.MX28
 FEATURES:=ext4 rtc usb gpio
 CPU_TYPE:=arm926ej-s
+SUBTARGETS:=generic
 
-KERNEL_PATCHVER:=5.4
+KERNEL_PATCHVER:=6.6
+
 KERNELNAME:=zImage dtbs
 
 define Target/Description

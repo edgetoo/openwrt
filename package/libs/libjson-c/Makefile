@@ -8,24 +8,30 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=json-c
-PKG_VERSION:=0.15
+PKG_VERSION:=0.17
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-nodoc.tar.gz
 PKG_SOURCE_URL:=https://s3.amazonaws.com/json-c_releases/releases/
-PKG_HASH:=99bca4f944b8ced8ae0bbc6310d6a3528ca715e69541793a1ef51f8c5b4b0878
+PKG_HASH:=8df3b66597333dd365762cab2de2ff68e41e3808a04b692e696e0550648eefaa
 
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 PKG_LICENSE:=MIT
 PKG_LICENSE_FILES:=COPYING
-PKG_CPE_ID:=cpe:/a:json-c_project:json-c
+PKG_CPE_ID:=cpe:/a:json-c:json-c
 
-PKG_BUILD_PARALLEL:=1
 HOST_BUILD_PREFIX:=$(STAGING_DIR_HOST)
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/cmake.mk
+
+CMAKE_HOST_OPTIONS += \
+	-DDISABLE_EXTRA_LIBS=TRUE \
+	-DBUILD_SHARED_LIBS=FALSE
+
+CMAKE_OPTIONS += \
+	-DDISABLE_EXTRA_LIBS=TRUE
 
 define Package/libjson-c
   SECTION:=libs

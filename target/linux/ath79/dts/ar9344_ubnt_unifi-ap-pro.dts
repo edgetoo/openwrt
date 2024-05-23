@@ -46,14 +46,8 @@
 	clock-frequency = <40000000>;
 };
 
-&uart {
-	status = "okay";
-};
-
 &spi {
 	status = "okay";
-
-	num-cs = <1>;
 
 	flash@0 {
 		compatible = "jedec,spi-nor";
@@ -106,10 +100,28 @@
 				read-only;
 			};
 
-			art: partition@ff0000 {
+			partition@ff0000 {
 				label = "art";
 				reg = <0xff0000 0x10000>;
 				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					macaddr_art_0: macaddr@0 {
+						reg = <0x0 0x6>;
+					};
+
+					calibration_art_1000: calibration@1000 {
+						reg = <0x1000 0x440>;
+					};
+
+					calibration_art_5000: calibration@5000 {
+						reg = <0x5000 0x440>;
+					};
+				};
 			};
 		};
 	};
@@ -121,14 +133,16 @@
 	wifi@0,0 {
 		compatible = "pci168c,0033";
 		reg = <0 0 0 0 0>;
-		qca,no-eeprom;
+		nvmem-cells = <&calibration_art_5000>;
+		nvmem-cell-names = "calibration";
 	};
 };
 
 &wmac {
 	status = "okay";
 
-	mtd-cal-data = <&art 0x1000>;
+	nvmem-cells = <&calibration_art_1000>;
+	nvmem-cell-names = "calibration";
 };
 
 &mdio0 {
@@ -150,7 +164,8 @@
 
 	pll-data = <0x6000000 0x101 0x1616>;
 
-	mtd-mac-address = <&art 0x0>;
+	nvmem-cells = <&macaddr_art_0>;
+	nvmem-cell-names = "mac-address";
 
 	phy-mode = "rgmii";
 	phy-handle = <&phy0>;

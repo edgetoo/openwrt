@@ -4,6 +4,8 @@
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
+#include <dt-bindings/leds/common.h>
+#include <dt-bindings/mtd/partitions/uimage.h>
 
 / {
 	aliases {
@@ -33,7 +35,8 @@
 		pinctrl-0 = <&jtag_disable_pins &switch_led_disable_pins &clks_disable_pins>;
 
 		led_power: power {
-			label = "green:power";
+			function = LED_FUNCTION_POWER;
+			color = <LED_COLOR_ID_GREEN>;
 			gpios = <&gpio 11 GPIO_ACTIVE_LOW>;
 		};
 
@@ -48,7 +51,8 @@
 		};
 
 		wan {
-			label = "green:wan";
+			function = LED_FUNCTION_WAN;
+			color = <LED_COLOR_ID_GREEN>;
 			gpios = <&gpio 17 GPIO_ACTIVE_LOW>;
 		};
 	};
@@ -57,7 +61,8 @@
 		compatible = "gpio-leds";
 
 		wlan {
-			label = "green:wlan";
+			function = LED_FUNCTION_WLAN;
+			color = <LED_COLOR_ID_GREEN>;
 			gpios = <&ath9k 1 GPIO_ACTIVE_LOW>;
 			linux,default-trigger = "phy0tpt";
 		};
@@ -66,8 +71,6 @@
 
 &spi {
 	status = "okay";
-
-	num-cs = <1>;
 
 	flash@0 {
 		compatible = "jedec,spi-nor";
@@ -91,7 +94,9 @@
 			};
 
 			partition@50000 {
-				compatible = "netgear,uimage";
+				compatible = "openwrt,uimage", "denx,uimage";
+				openwrt,ih-magic = <0x32303631>;
+				openwrt,ih-type = <IH_TYPE_FILESYSTEM>;
 				reg = <0x50000 0x3a0000>;
 				label = "firmware";
 			};
@@ -100,19 +105,37 @@
 				reg = <0x3f0000 0x10000>;
 				label = "art";
 				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					macaddr_art_0: macaddr@0 {
+						compatible = "mac-base";
+						reg = <0x0 0x6>;
+						#nvmem-cell-cells = <1>;
+					};
+
+					macaddr_art_6: macaddr@6 {
+						reg = <0x6 0x6>;
+					};
+				};
 			};
 		};
 	};
 };
 
 &eth0 {
-	mtd-mac-address = <&art 0x0>;
+	nvmem-cells = <&macaddr_art_0 0>;
+	nvmem-cell-names = "mac-address";
 };
 
 &eth1 {
 	status = "okay";
 
-	mtd-mac-address = <&art 0x6>;
+	nvmem-cells = <&macaddr_art_6>;
+	nvmem-cell-names = "mac-address";
 };
 
 &pcie {
@@ -121,14 +144,10 @@
 	ath9k: wifi@0,0 {
 		compatible = "pci168c,002b";
 		reg = <0x0000 0 0 0 0>;
-		mtd-mac-address = <&art 0x0>;
-		mtd-mac-address-increment = <1>;
+		nvmem-cells = <&macaddr_art_0 1>;
+		nvmem-cell-names = "mac-address";
 		qca,no-eeprom;
 		#gpio-cells = <2>;
 		gpio-controller;
 	};
-};
-
-&uart {
-	status = "okay";
 };

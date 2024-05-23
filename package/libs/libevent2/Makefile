@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libevent2
-PKG_VERSION:=2.1.11
+PKG_VERSION:=2.1.12
 PKG_RELEASE:=2
 
 PKG_SOURCE:=libevent-$(PKG_VERSION)-stable.tar.gz
 PKG_SOURCE_URL:=https://github.com/libevent/libevent/releases/download/release-$(PKG_VERSION)-stable
-PKG_HASH:=a65bac6202ea8c5609fd5c7e480e6d25de467ea1917c08290c521752f147283d
+PKG_HASH:=92e6de1be9ec176428fd2367677e61ceffc2ee1cb119035037a27d346b0403bb
 PKG_BUILD_DIR:=$(BUILD_DIR)/libevent-$(PKG_VERSION)-stable
 
 PKG_MAINTAINER:=Jo-Philipp Wich <jo@mein.io>
@@ -23,7 +23,10 @@ PKG_CPE_ID:=cpe:/a:libevent_project:libevent
 
 PKG_CONFIG_DEPENDS:= \
 	CONFIG_PACKAGE_libevent2-openssl \
+	CONFIG_PACKAGE_libevent2-pthreads \
 	CONFIG_PACKAGE_libevent2-mbedtls
+
+PKG_BUILD_FLAGS:=gc-sections lto
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
@@ -111,8 +114,8 @@ define Package/libevent2-pthreads/description
 	threading & locking.
 endef
 
-TARGET_CFLAGS += $(FPIC) -ffunction-sections -fdata-sections -flto
-TARGET_LDFLAGS += -Wl,--gc-sections,--as-needed -flto
+TARGET_CFLAGS += $(FPIC)
+TARGET_LDFLAGS += -Wl,--as-needed
 
 CMAKE_OPTIONS += \
 	-DEVENT__DISABLE_BENCHMARK:BOOL=ON \
